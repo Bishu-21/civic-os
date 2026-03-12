@@ -25,10 +25,15 @@ interface InfrastructureAlert {
     severity: 'Critical' | 'High' | 'Medium' | 'Low';
 }
 
-export function getComplaints(): Complaint[] {
+export function getComplaints(userId?: string): Complaint[] {
     if (typeof window === 'undefined') return [];
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    const complaints: Complaint[] = stored ? JSON.parse(stored) : [];
+    
+    if (userId) {
+        return complaints.filter(c => c.userId === userId);
+    }
+    return complaints;
 }
 
 // Helper for spatial distance check (Haversine formula)
@@ -89,51 +94,74 @@ export function checkInfrastructureAlerts() {
     return { active: false };
 }
 
-export function generateDemoData(): Complaint[] {
-    const wards = ["Karol Bagh", "Lajpat Nagar", "Rohini", "Dwarka", "Greater Kailash"];
-    const coords: Record<string, [number, number]> = {
-        "Karol Bagh": [28.6550, 77.1888],
-        "Lajpat Nagar": [28.5677, 77.2433],
-        "Rohini": [28.7041, 77.1025],
-        "Dwarka": [28.5823, 77.0500],
-        "Greater Kailash": [28.5482, 77.2347]
-    };
-
-    let demoComplaints: Complaint[] = [];
-    if (typeof window !== 'undefined') {
-        demoComplaints = Array.from({ length: 10 }).map((_, i) => {
-            const ward = wards[Math.floor(Math.random() * wards.length)];
-            const baseCoord = coords[ward];
-            const lat = baseCoord[0] + (Math.random() - 0.5) * 0.01;
-            const lng = baseCoord[1] + (Math.random() - 0.5) * 0.01;
-
-            return {
-                id: `GRV-${1000 + i}`,
-                description: `Mock complaint for ${ward} regarding civic amenities.`,
-                category: ["Streetlight", "Garbage", "Road Damage"][Math.floor(Math.random() * 3)] as ComplaintCategory,
-                priority: ["High", "Medium", "Low", "Critical"][Math.floor(Math.random() * 4)] as Priority,
-                department: "PWD",
-                lat,
-                lng,
-                status: "Pending",
-                assignedTo: "", // Provide missing required field
-                createdAt: new Date().toISOString(),
-                ward
-            };
-        });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(demoComplaints));
+export const generateDemoData = () => {
+  if (typeof window === 'undefined') return;
+  
+  const existing = localStorage.getItem(STORAGE_KEY);
+  const currentComplaints: Complaint[] = existing ? JSON.parse(existing) : [];
+  
+  // Filter out existing demo data to avoid duplication
+  const realData = currentComplaints.filter(c => c.userId !== 'demo-user');
+  
+  const demoData: Complaint[] = [
+    {
+      id: 'CIV-2078',
+      description: 'Garbage overflowing near the community center.',
+      category: 'Garbage',
+      priority: 'Medium',
+      department: 'Sanitation',
+      lat: 28.5355,
+      lng: 77.2410,
+      status: 'Pending',
+      assignedTo: 'Officer Unassigned',
+      createdAt: new Date().toISOString(),
+      ward: 'Ward 104 (Lajpat Nagar)',
+      userId: 'demo-user'
+    },
+    {
+      id: 'GRV-1000',
+      description: 'Streetlight blinking intermittently near the park entrance.',
+      category: 'Streetlight',
+      priority: 'Low',
+      department: 'Electrical',
+      lat: 28.5355,
+      lng: 77.2410,
+      status: 'In Progress',
+      assignedTo: 'Unit 4',
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      ward: 'Dwarka',
+      userId: 'demo-user'
+    },
+    {
+      id: 'GRV-1001',
+      description: 'Pothole on the main road causing traffic delays.',
+      category: 'Road Damage',
+      priority: 'High',
+      department: 'Public Works',
+      lat: 28.5355,
+      lng: 77.2410,
+      status: 'Pending',
+      assignedTo: 'Department Review',
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      ward: 'Karol Bagh',
+      userId: 'demo-user'
     }
-    return demoComplaints;
-}
+  ];
 
-export function getStats() {
-    const complaints = getComplaints();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...realData, ...demoData]));
+};
+
+export function getStats(userId?: string) {
+    const complaints = getComplaints(userId);
     const pending = complaints.filter(c => c.status === 'Pending').length;
+    const inProgress = complaints.filter(c => c.status === 'In Progress').length;
     const resolved = complaints.filter(c => c.status === 'Resolved').length;
 
     return {
-        pendingGrievances: pending,
-        avgTurnaround: "4.2 hrs",
+        totalReports: complaints.length,
+        pendingReports: pending,
+        inProgressReports: inProgress,
+        resolvedReports: resolved,
         citizenSatisfaction: resolved > 0 ? "88%" : "N/A"
     };
 }

@@ -1,15 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --font-inter: var(--font-inter);
-  --font-roboto: var(--font-roboto);
+  --color-primary: #0EA5A4;
+  --color-gov-blue: #1e6d8a;
+  --color-background-light: #f6f7f8;
+  --color-background-dark: #121c20;
+  
+  --font-inter: var(--font-inter), sans-serif;
+  --font-roboto: var(--font-roboto), sans-serif;
 }
 
 :root {
   --background: #ffffff;
   --foreground: #1e293b;
 
-  /* Brand Colors */
+  /* Legacy / Compatibility Brand Colors */
   --color-mcd-navy: #1e3a8a;
   --color-mcd-slate: #475569;
   --color-mcd-success: #16a34a;

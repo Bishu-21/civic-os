@@ -3,95 +3,61 @@ import { Phone, Mail, Instagram, Twitter, Facebook, ExternalLink } from "lucide-
 
 export default function Footer() {
     return (
-        <footer className="w-full bg-[#1e293b] text-white pt-20 pb-10">
-            <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-                    {/* About Section */}
-                    <div className="flex flex-col gap-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white rounded flex items-center justify-center text-mcd-navy font-bold text-lg">
-                                MCD
-                            </div>
-                            <span className="text-xl font-bold tracking-tight">CivicOS</span>
+        <footer className="bg-gov-blue text-white py-12">
+            <div className="container mx-auto px-4 md:px-10 lg:px-20">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 text-center md:text-left">
+                    <div className="md:col-span-2">
+                        <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
+                            <img 
+                                alt="Delhi Logo White" 
+                                className="h-8 brightness-0 invert" 
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmy5Ef_ppiuApwYTUOPSSzx2qSSqyDIRCya4ZgsLXtA-Pzc6s1wx2wI3nqNaOB33AaKmR03aan-VxcZvqyXD1voY_CLjO4tBHLwc94Ui8Rbk2AMg7T7zFCCCYVR2NPzzvsuCoplmhcwnKjDVRIvmAzwojmceNy3NGqC4To5HBDvhoY8ZNQ423V_OnSqDvDXV7OHiMWKbuh5oZq9yERe7iBVgdzhSl4qLtRHfQ55iRMi3oqsY9QCn_Ce718MiDSkTvHqW7ornJLTg" 
+                            />
+                            <span className="text-xl font-extrabold tracking-tight">MCD CivicOS</span>
                         </div>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Official platform of the Municipal Corporation of Delhi. Empowering citizens through transparent, AI-driven digital governance for a cleaner and smarter national capital.
+                        <p className="text-slate-300 max-w-sm mb-6 mx-auto md:mx-0">
+                            The unified platform for Municipal Corporation of Delhi services. Committed to transparency, accountability, and citizen empowerment.
                         </p>
-                        <div className="flex gap-4">
-                            <Link href="#" className="p-2 bg-slate-800 rounded-full hover:bg-mcd-navy transition-colors">
+                        <div className="flex justify-center md:justify-start gap-4">
+                            <Link href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
                                 <Twitter className="w-4 h-4" />
                             </Link>
-                            <Link href="#" className="p-2 bg-slate-800 rounded-full hover:bg-mcd-navy transition-colors">
-                                <Instagram className="w-4 h-4" />
-                            </Link>
-                            <Link href="#" className="p-2 bg-slate-800 rounded-full hover:bg-mcd-navy transition-colors">
+                            <Link href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
                                 <Facebook className="w-4 h-4" />
                             </Link>
+                            <Link href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                                <Instagram className="w-4 h-4" />
+                            </Link>
                         </div>
                     </div>
 
-                    {/* Quick Links */}
                     <div>
-                        <h4 className="text-lg font-bold mb-6">MCD Links</h4>
-                        <ul className="flex flex-col gap-4">
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2">Property Tax <ExternalLink className="w-3 h-3" /></Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2">Birth & Death Certificates <ExternalLink className="w-3 h-3" /></Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2">Trade Licenses <ExternalLink className="w-3 h-3" /></Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2">Tenders & Auctions <ExternalLink className="w-3 h-3" /></Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">Career Opportunities</Link></li>
+                        <h4 className="font-bold text-lg mb-6">Quick Links</h4>
+                        <ul className="space-y-4 text-slate-300 text-sm">
+                            <li><Link href="#" className="hover:text-white transition-colors">Active Complaints</Link></li>
+                            <li><Link href="#" className="hover:text-white transition-colors">Public Notices</Link></li>
+                            <li><Link href="#" className="hover:text-white transition-colors">Ward Information</Link></li>
+                            <li><Link href="#" className="hover:text-white transition-colors">Town Planning</Link></li>
                         </ul>
                     </div>
 
-                    {/* Citizen Corner */}
                     <div>
-                        <h4 className="text-lg font-bold mb-6">Citizen Corner</h4>
-                        <ul className="flex flex-col gap-4">
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">Public Health Facilities</Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">Zonal Information</Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">Grievance Redressal</Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">Right to Information</Link></li>
-                            <li><Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">Citizen Charter</Link></li>
+                        <h4 className="font-bold text-lg mb-6">Support</h4>
+                        <ul className="space-y-4 text-slate-300 text-sm">
+                            <li><Link href="#" className="hover:text-white transition-colors">Help Desk</Link></li>
+                            <li><Link href="#" className="hover:text-white transition-colors">User Manual</Link></li>
+                            <li><Link href="#" className="hover:text-white transition-colors">FAQs</Link></li>
+                            <li><Link href="#" className="hover:text-white transition-colors flex items-center justify-center md:justify-start gap-2">Contact Us <Phone className="w-3 h-3" /></Link></li>
                         </ul>
-                    </div>
-
-                    {/* Contact Section */}
-                    <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
-                        <h4 className="text-lg font-bold mb-6">Contact Helpline</h4>
-                        <div className="flex flex-col gap-6">
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 bg-mcd-navy rounded-lg">
-                                    <Phone className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Toll-Free Helpline</span>
-                                    <span className="text-2xl font-bold">155305</span>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 bg-slate-700 rounded-lg">
-                                    <Mail className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Email Support</span>
-                                    <span className="text-sm font-semibold">support.mcd@delhi.gov.in</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                {/* Bottom Bar */}
-                <div className="pt-10 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="text-xs text-slate-500 font-medium">
-                        Designed and Maintained for <span className="text-slate-300 font-bold">Municipal Corporation of Delhi</span>
-                    </div>
-                    <div className="flex gap-8 text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider">
-                        <Link href="#" className="hover:text-white transition-colors uppercase">Privacy Policy</Link>
-                        <Link href="#" className="hover:text-white transition-colors uppercase">Terms of Service</Link>
-                        <Link href="#" className="hover:text-white transition-colors uppercase">Accessibility Statement</Link>
-                    </div>
-                    <div className="text-[10px] text-slate-600 font-mono">
-                        V 1.0.4 | STITCH-MCD-PR-01
+                <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-[10px] md:text-sm">
+                    <p>© 2024 Municipal Corporation of Delhi. All rights reserved.</p>
+                    <div className="flex gap-6">
+                        <Link href="#" className="hover:text-white">Privacy Policy</Link>
+                        <Link href="#" className="hover:text-white">Terms of Service</Link>
+                        <Link href="#" className="hover:text-white">Accessibility</Link>
                     </div>
                 </div>
             </div>

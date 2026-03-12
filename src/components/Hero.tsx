@@ -37,7 +37,8 @@ export default function Hero() {
                 status: 'Pending',
                 assignedTo: 'Officer Unassigned',
                 createdAt: new Date().toISOString(),
-                ward: 'Ward 104 (Lajpat Nagar)' // Default ward for demo
+                ward: 'Ward 104 (Lajpat Nagar)',
+                userId: 'anonymous' // Default until logged in
             };
 
             saveComplaint(newComplaint);
@@ -49,111 +50,113 @@ export default function Hero() {
     };
 
     return (
-        <section className="relative w-full overflow-hidden bg-white">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #1e3a8a 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
-            </div>
-
-            <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
-                <div className="max-w-4xl mx-auto text-center mb-12">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-mcd-navy text-xs font-bold mb-6 border border-blue-100 uppercase tracking-wider">
-                        <Sparkles className="w-3 h-3 text-mcd-navy" />
-                        AI-Powered Governance
-                    </div>
-                    <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                        A Smarter, Cleaner Delhi <br />
-                        <span className="text-mcd-navy">for Every Citizen.</span>
+        <section className="relative overflow-hidden bg-[#F8FAFC] py-20 lg:py-32">
+            {/* Soft Focus Infrastructure Background */}
+            <div 
+                className="absolute inset-0 opacity-10 pointer-events-none bg-cover bg-center" 
+                style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAd8OJNn3czIeTEWeXqfltC1a2ihcXeoFdbdPSN3vP1N7H9SYZUR8T9DQ4OXmcd3HPj3o8O_utVtE-DOBOJbrlzTn8GoskcKq52MbxW3vxE21lTx8TRX1O35hKl0bkrj1jZW9rFpGZtq4oLHcHqdA79KoYGyzq2Wz2rpdavBWtzub7j3pp0eJ6ePLENi41NAfq02zRcb_OEACiYhPQPrXMYcbHsDPDnW4xQNaRw3lO_vCJTbR6_LR11ZMBPpiQMggGRJv6rt_0b-w')" }}
+            />
+            
+            <div className="container mx-auto px-4 md:px-10 lg:px-20 relative z-10">
+                <div className="text-center max-w-4xl mx-auto mb-16">
+                    <h1 className="text-slate-900 text-4xl md:text-6xl font-black leading-tight tracking-tight mb-6">
+                        A Smarter, Cleaner Delhi for Every Citizen
                     </h1>
-                    <p className="text-lg md:text-xl text-mcd-slate max-w-2xl mx-auto leading-relaxed">
-                        Report issues, track resolutions, and build a better ward using AI-driven governance. Direct connection between citizens and MCD officers.
+                    <p className="text-slate-600 text-lg md:text-xl font-normal leading-relaxed mb-10 max-w-2xl mx-auto">
+                        Report civic issues, track resolutions, and connect directly with MCD departments in real-time. Together, we build a better city.
                     </p>
-                </div>
-
-                {/* CTA Area */}
-                <div className="max-w-3xl mx-auto flex flex-col md:flex-row gap-4 mb-16">
-                    <button className="flex-1 bg-mcd-navy text-white text-lg font-bold py-4 rounded-lg shadow-lg hover:bg-blue-900 transition-all transform hover:-translate-y-1">
-                        Report an Issue
-                    </button>
-
-                    <div className="flex-[1.5] relative group">
-                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                            <Search className="w-5 h-5 text-gray-400 group-focus-within:text-mcd-navy transition-colors" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Track Status: Enter Complaint ID (e.g., MCD-2024-X8A)"
-                            className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-lg focus:border-mcd-navy outline-none transition-all text-gray-700 font-medium shadow-sm"
-                        />
+                    
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button className="w-full sm:w-auto px-8 py-4 bg-primary text-white text-lg font-bold rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
+                            Report an Issue
+                        </button>
+                        <button className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-slate-300 text-slate-700 text-lg font-bold rounded-lg hover:bg-white transition-all">
+                            Track Complaint Status
+                        </button>
                     </div>
                 </div>
 
-                {/* AI Quick-Report Card */}
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-                        <div className="bg-mcd-navy px-6 py-3 flex justify-between items-center">
-                            <div className="flex items-center gap-2 text-white">
-                                <Sparkles className="w-4 h-4 text-blue-200" />
-                                <span className="text-sm font-bold uppercase tracking-wider">AI Quick-Report</span>
+                {/* AI Quick-Report Component */}
+                <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden relative">
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary via-gov-blue to-primary opacity-50" />
+                    
+                    <div className="p-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                                <Sparkles className="w-5 h-5" />
                             </div>
-                            <span className="text-[10px] text-blue-200 font-medium">Report in 30 Seconds</span>
+                            <div>
+                                <h3 className="text-slate-900 font-bold leading-none">AI Quick-Report</h3>
+                                <p className="text-xs text-slate-500 mt-1">Resolution Optimized</p>
+                            </div>
                         </div>
-                        <div className="p-6">
-                            <div className="relative mb-4">
-                                <textarea
-                                    rows={2}
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-mcd-navy transition-all resize-none text-gray-700"
-                                    placeholder="Tell us what's wrong? e.g., 'Garbage pile at Lajpat Nagar Metro Station' or 'No functional streetlights in Block C, Rohini'"
-                                ></textarea>
-                            </div>
 
-                            {!ticketId ? (
-                                <button
-                                    onClick={handleAnalyze}
-                                    disabled={isAnalyzing || !description.trim()}
-                                    className="w-full flex items-center justify-center gap-2 bg-mcd-navy/5 text-mcd-navy font-bold py-4 rounded-xl hover:bg-mcd-navy/10 transition-all border border-mcd-navy/20 disabled:opacity-50"
-                                >
-                                    {isAnalyzing ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <Sparkles className="w-4 h-4 text-mcd-navy" />
-                                    )}
-                                    {isAnalyzing ? "Analyzing Complaint..." : "Analyze with AI"}
-                                </button>
-                            ) : (
-                                <div className="p-4 bg-green-50 border border-green-100 rounded-xl animate-in fade-in slide-in-from-bottom-2">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2 text-green-700">
-                                            <CheckCircle2 className="w-5 h-5" />
-                                            <span className="text-sm font-bold uppercase tracking-wider">Ticket Generated</span>
-                                        </div>
-                                        <span className="text-xs font-black text-green-800">{ticketId}</span>
+                        {!ticketId ? (
+                            <>
+                                <div className="relative mb-6">
+                                    <textarea
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="Tell us what's wrong? e.g., 'Garbage pile at Lajpat Nagar Metro Station'"
+                                        className="w-full min-h-[120px] p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none text-slate-700"
+                                    />
+                                    <div className="absolute right-4 bottom-4 flex gap-2">
+                                        <button className="p-2 text-slate-400 hover:text-gov-blue transition-colors">
+                                            <Search className="w-5 h-5" />
+                                        </button>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-white p-2 rounded-lg border border-green-100">
-                                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Category</p>
-                                            <p className="text-[10px] font-black text-mcd-navy">{result?.category}</p>
-                                        </div>
-                                        <div className="bg-white p-2 rounded-lg border border-green-100">
-                                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Priority</p>
-                                            <p className="text-[10px] font-black text-mcd-navy">{result?.priority}</p>
-                                        </div>
-                                        <div className="bg-white p-2 rounded-lg border border-green-100">
-                                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Dept</p>
-                                            <p className="text-[10px] font-black text-mcd-navy">{result?.department}</p>
-                                        </div>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="flex gap-2">
+                                        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-full">NLP Analysis</span>
+                                        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-full">Priority Engine</span>
                                     </div>
-                                    <button
-                                        onClick={() => { setTicketId(null); setDescription(""); }}
-                                        className="w-full mt-4 text-[10px] font-bold text-green-700 uppercase tracking-widest hover:underline"
+                                    <button 
+                                        onClick={handleAnalyze}
+                                        disabled={isAnalyzing || !description.trim()}
+                                        className="flex items-center gap-2 px-6 py-3 bg-gov-blue text-white font-bold rounded-lg hover:brightness-110 shadow-md transition-all disabled:opacity-50"
                                     >
-                                        Report another issue
+                                        {isAnalyzing ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Sparkles className="w-4 h-4 fill-current" />
+                                        )}
+                                        {isAnalyzing ? "Analyzing..." : "Analyze with AI"}
                                     </button>
                                 </div>
-                            )}
-                        </div>
+                            </>
+                        ) : (
+                            <div className="p-6 bg-green-50 border border-green-100 rounded-xl animate-in fade-in slide-in-from-bottom-2">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2 text-green-700">
+                                        <CheckCircle2 className="w-5 h-5" />
+                                        <span className="text-sm font-bold uppercase tracking-wider">Complaint Logged</span>
+                                    </div>
+                                    <span className="text-xs font-black text-green-800">{ticketId}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 mb-6">
+                                    <div className="bg-white p-3 rounded-lg border border-green-100 shadow-sm">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Category</p>
+                                        <p className="text-xs font-black text-gov-blue truncate">{result?.category}</p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-lg border border-green-100 shadow-sm">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Priority</p>
+                                        <p className="text-xs font-black text-gov-blue">{result?.priority}</p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-lg border border-green-100 shadow-sm">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Dept</p>
+                                        <p className="text-xs font-black text-gov-blue truncate">{result?.department}</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => { setTicketId(null); setDescription(""); setResult(null); }}
+                                    className="w-full py-2 text-xs font-bold text-green-700 uppercase tracking-widest hover:underline"
+                                >
+                                    Report Another Issue
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

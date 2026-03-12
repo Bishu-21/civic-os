@@ -1,10 +1,45 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { User, Search, PlayCircle } from "lucide-react";
+import { User, Search, PlayCircle, ShieldCheck, LayoutGrid, LogOut } from "lucide-react";
 import { generateDemoData } from "@/lib/store";
+import { account } from "@/lib/appwrite";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
+    const router = useRouter();
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const session = await account.get();
+                setIsLoggedIn(!!session);
+            } catch (err) {
+                // Not logged in or error
+                setIsLoggedIn(false);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        checkSession();
+    }, []);
+
+    const handleLogout = async () => {
+        try {
+            await account.deleteSession("current");
+            setIsLoggedIn(false);
+            router.push("/");
+            // Force a refresh to update UI across the app if needed, 
+            // but state update + navigation should suffice.
+            window.location.reload();
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
+
     const handleDemoMode = () => {
         generateDemoData();
         alert("Demo data generated! Refreshing page...");
@@ -12,64 +47,65 @@ export default function Header() {
     };
 
     return (
-        <header className="w-full flex flex-col">
-            {/* Top Official Bar */}
-            <div className="w-full bg-[#f1f5f9] py-1 border-b border-gray-200">
-                <div className="container mx-auto px-4 flex justify-between items-center text-[10px] md:text-xs font-medium text-mcd-slate">
-                    <span>GOVERNMENT OF NCT OF DELHI</span>
-                    <div className="flex gap-4">
-                        <Link href="#" className="hover:text-mcd-navy transition-colors">Screen Reader Access</Link>
-                        <Link href="#" className="hover:text-mcd-navy transition-colors">Hindi</Link>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Header */}
-            <nav className="w-full bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-                    {/* Logo Placeholder */}
-                    <Link href="/" className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-mcd-navy rounded flex items-center justify-center text-white font-bold text-xl">
-                            MCD
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-xl font-bold text-mcd-navy leading-tight tracking-tight">CivicOS</span>
-                            <span className="text-[10px] text-mcd-slate font-medium uppercase tracking-widest">Digital India | Smart City</span>
-                        </div>
-                    </Link>
-
-                    {/* Navigation */}
-                    <div className="hidden md:flex items-center gap-8">
-                        <Link href="/" className="text-sm font-semibold text-mcd-navy border-b-2 border-mcd-navy pb-1">Home</Link>
-                        <Link href="/dashboard" className="text-sm font-medium text-mcd-slate hover:text-mcd-navy transition-colors">Dashboard</Link>
-                        <Link href="/map" className="text-sm font-medium text-mcd-slate hover:text-mcd-navy transition-colors">Spatial Map</Link>
-                        <Link href="/verification" className="text-sm font-medium text-mcd-slate hover:text-mcd-navy transition-colors">Verification</Link>
-                        <Link href="#" className="text-sm font-medium text-mcd-slate hover:text-mcd-navy transition-colors">Help</Link>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleDemoMode}
-                            className="hidden md:flex items-center gap-2 px-3 py-2 bg-mcd-navy/5 text-mcd-navy text-xs font-black rounded-lg hover:bg-mcd-navy/10 transition-all uppercase tracking-widest"
-                        >
-                            <PlayCircle className="w-4 h-4" />
-                            Demo Mode
-                        </button>
-
-                        <button className="p-2 text-mcd-slate hover:text-mcd-navy transition-colors md:hidden">
-                            <Search className="w-5 h-5" />
-                        </button>
-                        <Link
-                            href="/login"
-                            className="flex items-center gap-2 px-4 py-2 border-2 border-mcd-navy text-mcd-navy text-sm font-bold rounded-md hover:bg-mcd-navy hover:text-white transition-all duration-200"
-                        >
-                            <User className="w-4 h-4" />
-                            <span className="hidden sm:inline">Login</span>
+        <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+            <div className="container mx-auto px-4 md:px-10 lg:px-20 h-20 flex items-center justify-between">
+                {/* Branding */}
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                        <img 
+                            alt="National Emblem of India" 
+                            className="h-10 w-auto" 
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmy5Ef_ppiuApwYTUOPSSzx2qSSqyDIRCya4ZgsLXtA-Pzc6s1wx2wI3nqNaOB33AaKmR03aan-VxcZvqyXD1voY_CLjO4tBHLwc94Ui8Rbk2AMg7T7zFCCCYVR2NPzzvsuCoplmhcwnKjDVRIvmAzwojmceNy3NGqC4To5HBDvhoY8ZNQ423V_OnSqDvDXV7OHiMWKbuh5oZq9yERe7iBVgdzhSl4qLtRHfQ55iRMi3oqsY9QCn_Ce718MiDSkTvHqW7ornJLTg" 
+                        />
+                        <div className="hidden sm:block border-l border-slate-300 h-8 mx-2"></div>
+                        <Link href="/" className="flex flex-col leading-none">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Govt. of Delhi</span>
+                            <h1 className="text-gov-blue text-xl font-extrabold tracking-tight">MCD CivicOS</h1>
                         </Link>
                     </div>
                 </div>
-            </nav>
+
+                {/* Navigation Links */}
+                <nav className="hidden lg:flex items-center gap-8">
+                    <Link href="/" className="text-sm font-semibold text-gov-blue hover:text-primary transition-colors">Home</Link>
+                    {isLoggedIn && (
+                        <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Dashboard</Link>
+                    )}
+                    <Link href="/services" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Services</Link>
+                    <Link href="/map" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Spatial Map</Link>
+                    <Link href="/help" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Help</Link>
+                </nav>
+
+                {/* Auth Buttons */}
+                <div className="flex items-center gap-6">
+                    {isLoading ? (
+                        <div className="w-20 h-8 bg-slate-100 animate-pulse rounded-lg" />
+                    ) : isLoggedIn ? (
+                        <>
+                            <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2 bg-gov-blue/5 text-gov-blue text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gov-blue/10 transition-all">
+                                <LayoutGrid className="w-4 h-4" />
+                                Dashboard
+                            </Link>
+                            <button 
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 px-4 py-2 border border-red-100 text-red-500 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-50 transition-all"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Logout
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <div className="hidden md:flex gap-6">
+                                <Link href="/auth" className="text-slate-600 font-bold hover:text-primary transition-colors">Login</Link>
+                            </div>
+                            <Link href="/auth" className="px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 shadow-md shadow-primary/20 transition-all">
+                                Register
+                            </Link>
+                        </>
+                    )}
+                </div>
+            </div>
         </header>
     );
 }

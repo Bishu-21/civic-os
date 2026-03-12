@@ -22,6 +22,7 @@ export interface Complaint {
     assignedTo: string;
     createdAt: string;
     ward: string;
+    userId: string;
     citizenPhoto?: string;
     repairPhoto?: string;
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Image from "next/image";
 import Link from "next/link";
 import {
     Bell,
-    Settings,
+    Search,
     ChevronDown,
     AlertCircle,
     Clock,
@@ -14,206 +15,436 @@ import {
     ExternalLink,
     ChevronRight,
     ChevronLeft,
-    LayoutDashboard,
     RefreshCw,
     ShieldAlert,
-    Sparkles
+    Sparkles,
+    LayoutGrid,
+    FileText,
+    Map as MapIcon,
+    Settings,
+    Clock3,
+    CheckCircle,
+    XCircle,
+    TrendingUp,
+    TrendingDown,
+    MapPin,
+    Mic,
+    Volume2,
+    User,
+    FileDown
 } from "lucide-react";
-import { getComplaints, getStats, checkInfrastructureAlerts, updateComplaint } from "@/lib/store";
+import { account } from "@/lib/appwrite";
+import { getCurrentUserProfile, UserProfile } from "@/lib/profiles";
+import { getComplaints, updateComplaint, getStats } from "@/lib/store";
 import { Complaint } from "@/lib/types";
+import { analyzeIssue } from "@/lib/gemini";
+import { transcribeAudio, textToSpeech } from "@/lib/sarvam";
+import { generateGrievancePDF } from "@/lib/pdf";
 
-export default function Dashboard() {
+export default function CitizenDashboard() {
+    const router = useRouter();
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [complaints, setComplaints] = useState<Complaint[]>([]);
-    const [stats, setStats] = useState<any>(null);
-    const [alert, setAlert] = useState<any>(null);
+    const [stats, setStats] = useState({
+        totalReports: 0,
+        pendingReports: 0,
+        inProgressReports: 0,
+        resolvedReports: 0,
+        citizenSatisfaction: "N/A"
+    });
+    const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [activeZone, setActiveZone] = useState("South Delhi");
+    const [aiInsight, setAiInsight] = useState<any>(null);
+    
+    // Voice Assist State
+    const [isRecording, setIsRecording] = useState(false);
+    const [voiceFeedback, setVoiceFeedback] = useState("");
+
+    const handleVoiceAssist = async () => {
+        if (!isRecording) {
+            setIsRecording(true);
+            setVoiceFeedback("Listening for instructions...");
+            // In a real environment, we'd use MediaRecorder here.
+            setTimeout(async () => {
+                setIsRecording(false);
+                setVoiceFeedback("Transcribing: 'Summarize pending water leakages'...");
+                try {
+                    await textToSpeech("Summarizing pending water leakage reports for South Delhi.");
+                } catch (err) {
+                    console.error("TTS Error:", err);
+                }
+            }, 3000);
+        }
+    };
+
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const loadData = async (uid: string) => {
+        const allComplaints = getComplaints(uid);
+        const filtered = allComplaints.filter(c => 
+            c.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            c.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setComplaints(filtered);
+        setStats(getStats(uid));
+    };
 
     useEffect(() => {
-        refreshData();
-    }, []);
+        const initDashboard = async () => {
+            try {
+                setIsLoading(true);
+                const profile = await getCurrentUserProfile();
+                if (!profile) {
+                    router.replace('/auth/register');
+                    return;
+                }
+                setUserProfile(profile);
+                
+                // Perform initial load
+                const currentComplaints = getComplaints(profile.userId);
+                if (currentComplaints.length > 0) {
+                    const insight = await analyzeIssue(currentComplaints[0].description);
+                    setAiInsight(insight);
+                }
+                await loadData(profile.userId);
+            } catch (error: any) {
+                if (error.message === 'NO_SESSION') {
+                    router.replace('/auth');
+                } else {
+                    console.error("Dashboard Load Error:", error);
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        initDashboard();
+    }, [router]);
 
-    const refreshData = () => {
+    useEffect(() => {
+        if (userProfile) {
+            loadData(userProfile.userId);
+        }
+    }, [searchTerm, userProfile]);
+
+    const handleLogout = async () => {
+        try {
+            await account.deleteSession('current');
+            router.push('/');
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    };
+
+    const refreshFeed = async () => {
         setIsRefreshing(true);
-        const data = getComplaints();
-        setComplaints(data);
-        setStats(getStats());
-        setAlert(checkInfrastructureAlerts());
-        setTimeout(() => setIsRefreshing(false), 500);
+        if (userProfile) {
+            await loadData(userProfile.userId);
+        }
+        setTimeout(() => setIsRefreshing(false), 800);
     };
 
-    const handleAssign = (id: string) => {
-        const unit = `Unit ${Math.floor(Math.random() * 10) + 1}`;
-        updateComplaint(id, { assignedTo: unit, status: 'In Progress' });
-        refreshData();
-    };
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Loading Your Citizen Dashboard...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex min-h-screen bg-gray-50/50">
-            <Sidebar />
-
-            <main className="flex-1 overflow-auto">
-                {/* Top Header */}
-                <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <span className="text-xs font-bold text-mcd-slate uppercase tracking-wider">Active Zone:</span>
-                        <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-mcd-navy">
-                            Karol Bagh <ChevronDown className="w-4 h-4" />
-                        </button>
+        <div className="flex min-h-screen bg-[#F8FAFC]">
+            {/* Sidebar matches design */}
+            <aside className="w-64 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-20">
+                <div className="p-6 flex items-center gap-3 border-b border-slate-50">
+                    <div className="w-8 h-8 bg-gov-blue rounded-lg flex items-center justify-center shadow-lg shadow-gov-blue/20">
+                        <ShieldAlert className="w-5 h-5 text-white" />
                     </div>
+                    <div>
+                        <h1 className="text-sm font-black text-slate-800 leading-none">MCD CivicOS</h1>
+                        <p className="text-[10px] text-slate-400 font-bold mt-1">Govt. of NCT Delhi</p>
+                    </div>
+                </div>
+
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                    <SidebarLink icon={<LayoutGrid className="w-4 h-4" />} label="Overview" active />
+                    <SidebarLink icon={<FileText className="w-4 h-4" />} label="My Reports" />
+                    <SidebarLink icon={<MapIcon className="w-4 h-4" />} label="Local Map" />
+                    <SidebarLink icon={<ShieldAlert className="w-4 h-4" />} label="Emergency" />
+                    
+                    <div className="pt-8 pb-2 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Support</div>
+                    <SidebarLink icon={<Settings className="w-4 h-4" />} label="Preferences" />
+                </nav>
+
+                <div className="p-4 border-t border-slate-50">
+                    <Link href="/report" className="w-full py-3 bg-gov-blue text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-gov-blue/10 flex items-center justify-center gap-2">
+                        <span>+ New Report</span>
+                    </Link>
+                </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="flex-1 ml-64 p-8">
+                {/* Header Section */}
+                <header className="flex justify-between items-center mb-8 bg-white/50 backdrop-blur-md p-4 rounded-3xl border border-white/50 shadow-sm sticky top-4 z-10">
+                    <div className="flex items-center gap-4 flex-1">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input 
+                                type="text" 
+                                placeholder="Search Ticket ID or Ward..." 
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-gov-blue/10 transition-all"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="h-6 w-px bg-slate-200 mx-2" />
+                        <div className="flex items-center gap-2 text-slate-500 hover:text-gov-blue cursor-pointer transition-colors px-3 py-2 rounded-xl border border-transparent hover:border-slate-100">
+                            <MapPin className="w-4 h-4" />
+                            <span className="text-sm font-bold">Zone: {activeZone}</span>
+                            <ChevronDown className="w-4 h-4" />
+                        </div>
+                    </div>
+
                     <div className="flex items-center gap-6">
-                        <button className="relative p-2 text-mcd-slate hover:text-mcd-navy transition-colors">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                        <button 
+                            onClick={handleVoiceAssist}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${isRecording ? 'bg-red-50 border-red-200 text-red-600 animate-pulse' : 'bg-white border-slate-100 text-gov-blue hover:bg-slate-50'}`}
+                        >
+                            {isRecording ? <Mic className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            <span className="text-xs font-black uppercase tracking-widest">{isRecording ? "Listening..." : "Voice Assist"}</span>
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-mcd-slate hover:bg-gray-50 transition-all">
-                            <Settings className="w-4 h-4" />
-                            System Admin
-                        </button>
+
+                        <div className="relative cursor-pointer hover:bg-slate-100 p-2 rounded-xl transition-colors">
+                            <Bell className="w-5 h-5 text-slate-500" />
+                            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                        </div>
+                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+                            <div className="text-right">
+                                <p className="text-sm font-black text-slate-800 leading-none">{userProfile?.name || "Citizen"}</p>
+                                <p className="text-[10px] text-slate-400 font-bold mt-1">Resident - {activeZone}</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md">
+                                {userProfile?.profileImageUrl ? (
+                                    <img src={userProfile.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">
+                                        <User className="w-6 h-6" />
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={handleLogout} className="p-2 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-colors">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </header>
 
-                <div className="p-8 space-y-8">
+                <div className="space-y-8">
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium text-mcd-slate">Pending Grievances</p>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-black text-mcd-navy">{stats?.pendingGrievances || 0}</span>
-                                        <span className="text-xs font-bold text-red-600">+12% vs LW</span>
-                                    </div>
-                                </div>
-                                <AlertCircle className="w-5 h-5 text-red-500" />
-                            </div>
-                            <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">HIGH PRIORITY TICKETS</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium text-mcd-slate">Avg Turnaround Time</p>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-black text-mcd-navy">{stats?.avgTurnaround || "N/A"}</span>
-                                        <span className="text-xs font-bold text-green-600">-0.5% vs LW</span>
-                                    </div>
-                                </div>
-                                <Clock className="w-5 h-5 text-blue-500" />
-                            </div>
-                            <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">EFFICIENCY METRIC (TAT)</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium text-mcd-slate">Citizen Satisfaction</p>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-black text-mcd-navy">{stats?.citizenSatisfaction || "85%"}</span>
-                                        <span className="text-xs font-bold text-red-500">-2% vs LW</span>
-                                    </div>
-                                </div>
-                                <Smile className="w-5 h-5 text-yellow-500" />
-                            </div>
-                            <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">CSAT SCORE (LIVE FEEDBACK)</p>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <MISStatCard 
+                            title="My Active Reports" 
+                            value={stats.pendingReports + stats.inProgressReports} 
+                            trend="Real-time" 
+                            trendUp={true} 
+                            icon={<FileText className="text-gov-blue" />} 
+                            subtitle="Currently Processing"
+                        />
+                        <MISStatCard 
+                            title="Resolved Tickets" 
+                            value={stats.resolvedReports} 
+                            trend="Total" 
+                            trendUp={true} 
+                            icon={<CheckCircle className="text-green-500" />} 
+                            subtitle="Successfully Closed"
+                        />
+                        <MISStatCard 
+                            title="Community Health" 
+                            value={stats.citizenSatisfaction} 
+                            trend="Local" 
+                            trendUp={true} 
+                            icon={<Smile className="text-orange-500" />} 
+                            subtitle="Based on Ward Data"
+                        />
+                        <MISStatCard 
+                            title="Total Contributions" 
+                            value={stats.totalReports} 
+                            trend="Lifetime" 
+                            trendUp={true} 
+                            icon={<TrendingUp className="text-indigo-500" />} 
+                            subtitle="Issues Reported"
+                        />
                     </div>
 
-                    {/* AI Alert Card */}
-                    {alert?.active && (
-                        <div className="bg-[#eff6ff] border border-blue-100 rounded-2xl overflow-hidden flex flex-col md:flex-row shadow-sm animate-in zoom-in-95 duration-300">
-                            <div className="w-full md:w-64 h-48 md:h-auto relative bg-blue-100 flex items-center justify-center">
-                                <ShieldAlert className="w-16 h-16 text-blue-300 opacity-50" />
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/5 to-blue-900/10"></div>
+                    {/* AI Alert Card matches design */}
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 flex items-center justify-between shadow-sm animate-in zoom-in-95 duration-500">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-gov-blue shadow-inner">
+                                <Sparkles className="w-6 h-6" />
                             </div>
-                            <div className="flex-1 p-8 space-y-4">
-                                <div className="flex items-center gap-2 text-blue-700">
-                                    <Sparkles className="w-5 h-5" />
-                                    <span className="text-sm font-bold uppercase tracking-wider">AI Infrastructure Alert</span>
+                            <div>
+                                <div className="flex items-center gap-2 text-xs font-black text-gov-blue uppercase tracking-widest mb-1">
+                                    Citizen AI Assistant
                                 </div>
-                                <div className="space-y-2">
-                                    <h3 className="text-xl font-bold text-mcd-navy leading-tight">{alert.message}</h3>
-                                    <p className="text-sm text-mcd-slate max-w-2xl leading-relaxed">
-                                        Our AI detected a high-density cluster of reports in this area within a short timeframe. This likely indicates shared infrastructure failure (e.g., water main burst or transformer issue).
-                                    </p>
+                                <div className="text-sm text-slate-700 font-medium">
+                                    {aiInsight ? (
+                                        <>We noticed a trend in <span className="font-bold">{aiInsight.category}</span>. Your report has been prioritized as <span className="text-red-600 font-bold">{aiInsight.priority}</span>. {aiInsight.suggestedAction}</>
+                                    ) : (
+                                        <>Your personal AI is monitoring your reports for resolution progress.</>
+                                    )}
                                 </div>
-                                <button className="px-6 py-2.5 bg-mcd-navy text-white text-sm font-bold rounded-lg hover:bg-mcd-navy/90 transition-all flex items-center gap-2 shadow-lg shadow-mcd-navy/20">
-                                    Dispatch Rapid Response Team
-                                </button>
                             </div>
                         </div>
-                    )}
+                        <button className="px-6 py-3 bg-gov-blue text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gov-blue shadow-lg shadow-gov-blue/20 transition-all active:scale-95">
+                            Contact Support
+                        </button>
+                    </div>
 
-                    {/* Live Feed Table */}
-                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                            <h2 className="font-bold text-mcd-navy">Live Grievance Feed</h2>
+                    {/* Live Feed Table Section */}
+                    <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden p-8">
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-xl font-black text-slate-800">My Grievance History</h2>
                             <div className="flex gap-3">
-                                <button className="px-4 py-2 border border-gray-200 bg-white text-xs font-bold text-mcd-slate rounded-lg hover:bg-gray-50 transition-all">Export CSV</button>
-                                <button
-                                    onClick={refreshData}
-                                    className="px-4 py-2 border border-gray-200 bg-white text-xs font-bold text-mcd-slate rounded-lg hover:bg-gray-50 transition-all flex items-center gap-2"
+                                <button className="px-4 py-2 border border-slate-100 rounded-xl text-xs font-bold text-slate-500 flex items-center gap-2 hover:bg-slate-50 transition-colors">
+                                    <LayoutGrid className="w-4 h-4" /> Filter
+                                </button>
+                                <button 
+                                    onClick={refreshFeed}
+                                    className="px-4 py-2 bg-slate-50 text-gov-blue rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-gov-blue/5 transition-colors"
                                 >
-                                    <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                    Refresh Feed
+                                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
                                 </button>
                             </div>
                         </div>
+
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left">
                                 <thead>
-                                    <tr className="bg-gray-50/50 border-b border-gray-100">
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">ID</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ward</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned To</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Action</th>
+                                    <tr className="border-b border-slate-50">
+                                        <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ticket ID</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ward</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Assigned Dept.</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {complaints.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-mcd-slate italic">No complaints reported yet. Use Demo Mode to populate data.</td>
+                                <tbody className="divide-y divide-slate-50">
+                                    {complaints.length > 0 ? complaints.map((item) => (
+                                        <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-4 py-6 text-sm font-bold text-slate-500">#{item.id}</td>
+                                            <td className="px-4 py-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+                                                        <Volume2 className="w-4 h-4" />
+                                                    </div>
+                                                    <span className="text-sm font-bold text-slate-800">{item.category}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-6">
+                                                <p className="text-sm font-bold text-slate-800">{item.ward}</p>
+                                                <p className="text-[10px] text-slate-400 font-medium">South District</p>
+                                            </td>
+                                            <td className="px-4 py-6">
+                                                <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                    item.status === 'Resolved' ? 'bg-green-100 text-green-700' : 
+                                                    item.status === 'In Progress' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                    {item.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-6 text-sm font-medium text-slate-600">
+                                                {item.assignedTo || "Department Review"}
+                                            </td>
+                                            <td className="px-4 py-6 text-right">
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <button 
+                                                        onClick={() => generateGrievancePDF(item)}
+                                                        className="p-2 hover:bg-gov-blue/5 rounded-lg text-slate-400 hover:text-gov-blue transition-colors group/btn"
+                                                        title="Download PDF Receipt"
+                                                    >
+                                                        <FileDown className="w-4 h-4" />
+                                                    </button>
+                                                    <button className="text-xs font-black text-gov-blue uppercase hover:underline">Track Status</button>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    ) : (
-                                        complaints.map((row) => (
-                                            <tr key={row.id} className="hover:bg-gray-50/30 transition-colors">
-                                                <td className="px-6 py-4 text-sm font-bold text-mcd-slate">{row.id}</td>
-                                                <td className="px-6 py-4 text-sm font-bold text-mcd-navy">{row.category}</td>
-                                                <td className="px-6 py-4 text-sm font-medium text-mcd-slate">{row.ward}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${row.priority === 'Critical' ? 'bg-red-100 text-red-700' :
-                                                        row.priority === 'High' ? 'bg-orange-100 text-orange-700' :
-                                                            row.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                                                        }`}>
-                                                        {row.status} ({row.priority})
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm font-medium text-mcd-slate">{row.assignedTo || "Unassigned"}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    {row.status === 'Pending' ? (
-                                                        <button
-                                                            onClick={() => handleAssign(row.id)}
-                                                            className="text-[11px] font-black text-blue-600 uppercase hover:underline"
-                                                        >
-                                                            Dispatch Team
-                                                        </button>
-                                                    ) : (
-                                                        <Link href="/verification" className="text-[11px] font-black text-mcd-navy uppercase hover:underline flex items-center justify-end gap-1">
-                                                            View Case <ChevronRight className="w-3 h-3" />
-                                                        </Link>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={6} className="px-4 py-12 text-center">
+                                                <div className="flex flex-col items-center gap-3 opacity-40">
+                                                    <FileText className="w-12 h-12" />
+                                                    <p className="text-sm font-bold">No reports submitted yet. Your history will appear here.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     )}
                                 </tbody>
                             </table>
-                        </div>
-                        <div className="p-6 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
-                            <p className="text-xs font-medium text-mcd-slate">Showing {complaints.length} reports</p>
                         </div>
                     </div>
                 </div>
             </main>
         </div>
     );
+}
+
+function Loader2(props: any) {
+    return (
+        <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+    )
+}
+
+function SidebarLink({ icon, label, active = false }: { icon: any, label: string, active?: boolean }) {
+    return (
+        <Link href="#" className={`flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${active ? 'bg-gov-blue/5 text-gov-blue shadow-inner' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
+            <span className={`${active ? 'text-gov-blue' : 'text-slate-400'}`}>
+                {icon}
+            </span>
+            {label}
+        </Link>
+    )
+}
+
+function MISStatCard({ title, value, trend, trendUp, icon, subtitle }: any) {
+    return (
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+            <div className="flex justify-between items-start mb-6">
+                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center shadow-inner">
+                    {icon}
+                </div>
+                <div className={`flex items-center gap-1 text-[11px] font-black ${trendUp ? 'text-green-500' : 'text-red-500'}`}>
+                    {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    {trend}
+                </div>
+            </div>
+            <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</p>
+                <p className="text-3xl font-black text-slate-800 mb-2">{value}</p>
+                <div className="flex items-center gap-2">
+                    <div className="w-1 h-1 bg-slate-200 rounded-full" />
+                    <p className="text-[10px] text-slate-400 font-bold">{subtitle}</p>
+                </div>
+            </div>
+        </div>
+    )
 }

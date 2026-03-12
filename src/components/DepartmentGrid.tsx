@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Trash2, Zap, Construction, HeartPulse, Droplets, Flower2, ArrowRight } from "lucide-react";
 
 export default function DepartmentGrid() {
@@ -11,37 +12,37 @@ export default function DepartmentGrid() {
     ];
 
     return (
-        <section className="w-full bg-mcd-bg py-20">
-            <div className="container mx-auto px-4">
-                <div className="max-w-4xl mx-auto text-center mb-16">
-                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Our Departments</h2>
-                    <p className="text-mcd-slate">Quickly access services and report issues directly to the concerned department.</p>
+        <section className="py-20 bg-background-light">
+            <div className="container mx-auto px-4 md:px-10 lg:px-20">
+                <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+                    <div>
+                        <h2 className="text-gov-blue text-3xl font-bold tracking-tight">Direct Citizen Services</h2>
+                        <p className="text-slate-500 mt-2">Access specialized municipal services for your neighborhood</p>
+                    </div>
+                    <Link href="#" className="text-primary font-bold flex items-center gap-2 hover:underline">
+                        View All Services <ArrowRight className="w-4 h-4" />
+                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {departments.map((dept, index) => (
+                    {departments.map((service, index) => (
                         <div
                             key={index}
-                            className="group bg-white p-8 rounded-xl border border-gray-100 hover:border-mcd-navy transition-all duration-300 hover:shadow-xl cursor-pointer"
+                            className="group bg-white p-8 rounded-lg border border-slate-200 hover:border-primary/50 hover:shadow-xl transition-all"
                         >
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="p-3 bg-gray-50 rounded-lg group-hover:bg-blue-50 transition-colors">
-                                    <dept.icon className="w-8 h-8 text-mcd-slate group-hover:text-mcd-navy transition-colors" />
-                                </div>
-                                <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-mcd-navy group-hover:translate-x-1 transition-all" />
+                            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-6">
+                                <service.icon className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">{dept.name}</h3>
-                            <p className="text-sm text-mcd-slate leading-relaxed">
-                                {dept.description}
+                            <h3 className="text-gov-blue text-xl font-bold mb-3">{service.name}</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                                {service.description}
                             </p>
-                            <div className="mt-6 pt-6 border-t border-gray-50 flex items-center justify-between">
-                                <span className="text-xs font-bold text-mcd-navy uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                                    View Services
-                                </span>
-                                <span className="text-[10px] font-medium text-gray-400">
-                                    98% SLA Compliance
-                                </span>
-                            </div>
+                            <Link
+                                href="#"
+                                className="text-primary font-bold inline-flex items-center gap-2 group-hover:gap-3 transition-all"
+                            >
+                                Report Now <ArrowRight className="w-4 h-4" />
+                            </Link>
                         </div>
                     ))}
                 </div>

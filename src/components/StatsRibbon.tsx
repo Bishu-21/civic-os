@@ -7,27 +7,21 @@ export default function StatsRibbon() {
     ];
 
     return (
-        <div className="w-full bg-mcd-navy py-12">
-            <div className="container mx-auto px-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
+        <section className="bg-white border-y border-slate-100 shadow-sm py-8 font-roboto">
+            <div className="container mx-auto px-4 md:px-10 lg:px-20">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                     {stats.map((stat, index) => (
-                        <div key={index} className="flex flex-col items-center text-center">
-                            <span className="text-3xl md:text-4xl font-bold text-white mb-2">
+                        <div key={index} className={`flex flex-col items-center text-center ${index !== 0 ? 'border-l border-slate-100' : ''}`}>
+                            <span className={`${stat.active ? 'text-primary' : 'text-gov-blue'} text-3xl font-black mb-1`}>
                                 {stat.value}
                             </span>
-                            <span className={`text-xs md:text-sm font-medium uppercase tracking-widest ${stat.active ? 'text-green-400' : 'text-blue-200'}`}>
+                            <span className="text-slate-500 text-sm font-medium uppercase tracking-wider">
                                 {stat.label}
                             </span>
-                            {stat.active && (
-                                <div className="mt-2 flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                                    <span className="text-[10px] text-green-400 font-bold uppercase tracking-tighter">Real-time Update</span>
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>
             </div>
-        </div>
+        </section>
     );
 }
