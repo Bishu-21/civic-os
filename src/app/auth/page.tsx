@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ID } from 'appwrite';
-import { account } from '@/lib/appwrite';
-import { getCurrentUserProfile } from '@/lib/profiles';
+import { createPhoneTokenAction, verifyOTPAction, getCurrentUserAction } from '@/app/actions/auth';
+import { getServerProfileAction } from '@/app/actions/profile';
 import { Sparkles, ShieldCheck, RefreshCw, ChevronRight, CheckCircle2, AlertCircle, Phone, Fingerprint, ChevronLeft } from 'lucide-react';
 import { generateCaptcha, validateCaptcha } from '@/lib/captcha';
 import Image from 'next/image';
@@ -28,13 +27,9 @@ export default function AuthPage() {
         
         // Prevent session collision: Redirect if already logged in
         const checkSession = async () => {
-            try {
-                const session = await account.get();
-                if (session) {
-                    router.push('/dashboard');
-                }
-            } catch (err) {
-                // No session active, safe to proceed
+            const { success } = await getCurrentUserAction();
+            if (success) {
+                router.push('/dashboard');
             }
         };
         checkSession();
@@ -54,13 +49,17 @@ export default function AuthPage() {
 
         setIsLoading(true);
         try {
-            // Appwrite Phone Auth
-            const sessionToken = await account.createPhoneToken(ID.unique(), '+91' + mobile);
-            setUserId(sessionToken.userId);
-            setStep('otp');
-            setSuccess('OTP sent successfully');
+            // Securely send OTP via Server Action
+            const result = await createPhoneTokenAction(mobile);
+            if (result.success && result.userId) {
+                setUserId(result.userId);
+                setStep('otp');
+                setSuccess('OTP sent successfully');
+            } else {
+                setError(result.error || 'Failed to send OTP.');
+            }
         } catch (err: any) {
-            setError(err.message || 'Failed to send OTP. Please try again.');
+            setError('An unexpected error occurred.');
         } finally {
             setIsLoading(false);
         }
@@ -75,19 +74,24 @@ export default function AuthPage() {
 
         setIsLoading(true);
         try {
-            setSuccess('Authenticated successfully! Redirecting...');
+            // 1. Verify OTP securely
+            const result = await verifyOTPAction(userId, otp);
             
-            // Give Appwrite SDK a moment to sync cookies
-            setTimeout(async () => {
-                const profile = await getCurrentUserProfile();
-                if (profile) {
+            if (result.success) {
+                setSuccess('Authenticated successfully! Redirecting...');
+                
+                // 2. Check for profile
+                const profileResult = await getServerProfileAction();
+                if (profileResult.success && profileResult.profile) {
                     router.replace('/dashboard');
                 } else {
                     router.replace('/auth/register');
                 }
-            }, 500);
+            } else {
+                setError(result.error || 'Invalid OTP. Please try again.');
+            }
         } catch (err: any) {
-            setError(err.message || 'Invalid OTP. Please try again.');
+            setError('Verification failed.');
         } finally {
             setIsLoading(false);
         }

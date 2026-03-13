@@ -18,7 +18,7 @@ import {
 import Link from "next/link";
 import { analyzeIssueAction } from "@/app/actions/ai";
 import { saveComplaint, getComplaints } from "@/lib/store";
-import { getCurrentUserProfile } from "@/lib/profiles";
+import { getServerProfileAction } from "@/app/actions/profile";
 import { ComplaintCategory, Priority } from "@/lib/types";
 import { generateGrievancePDF } from "@/lib/pdf";
 
@@ -41,8 +41,8 @@ export default function ReportPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        getCurrentUserProfile().then(profile => {
-            if (profile) setUserId(profile.userId);
+        getServerProfileAction().then(result => {
+            if (result.success && result.profile) setUserId(result.profile.userId);
             else router.replace('/auth');
         });
     }, [router]);

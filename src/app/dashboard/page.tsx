@@ -33,8 +33,8 @@ import {
     User,
     FileDown
 } from "lucide-react";
-import { account } from "@/lib/appwrite";
-import { getCurrentUserProfile, UserProfile } from "@/lib/profiles";
+import { logoutAction } from "@/app/actions/auth";
+import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
 import { getComplaints, updateComplaint, getStats } from "@/lib/store";
 import { Complaint } from "@/lib/types";
 import { analyzeIssueAction, transcribeAudioAction, textToSpeechAction } from "@/app/actions/ai";
@@ -95,11 +95,12 @@ export default function CitizenDashboard() {
         const initDashboard = async () => {
             try {
                 setIsLoading(true);
-                const profile = await getCurrentUserProfile();
-                if (!profile) {
+                const result = await getServerProfileAction();
+                if (!result.success || !result.profile) {
                     router.replace('/auth/register');
                     return;
                 }
+                const profile = result.profile;
                 setUserProfile(profile);
                 
                 // Perform initial load
@@ -110,7 +111,7 @@ export default function CitizenDashboard() {
                 }
                 await loadData(profile.userId);
             } catch (error: any) {
-                if (error.message === 'NO_SESSION') {
+                if (error.message === 'NO_SESSION' || (error && typeof error === 'object' && error.error === 'NO_SESSION')) {
                     router.replace('/auth');
                 } else {
                     console.error("Dashboard Load Error:", error);
@@ -130,7 +131,7 @@ export default function CitizenDashboard() {
 
     const handleLogout = async () => {
         try {
-            await account.deleteSession('current');
+            await logoutAction();
             router.push('/');
         } catch (error) {
             console.error('Logout failed:', error);

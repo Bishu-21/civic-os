@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { account, storage, PROFILE_IMAGES_BUCKET_ID } from '@/lib/appwrite';
-import { createUserProfile } from '@/lib/profiles';
-import { ShieldCheck, User, IdCard, Camera, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { getCurrentUserAction } from '@/app/actions/auth';
+import { createProfileWithImageAction } from '@/app/actions/profile';
+import { ShieldCheck, User, IdCard, Camera, ChevronRight, Loader2, AlertCircle, Plus } from 'lucide-react';
 
 export default function RegisterProfilePage() {
     const router = useRouter();
@@ -19,10 +19,10 @@ export default function RegisterProfilePage() {
 
     useEffect(() => {
         const checkAuth = async () => {
-            try {
-                const user = await account.get();
+            const { success, user } = await getCurrentUserAction();
+            if (success && user) {
                 setUserId(user.$id);
-            } catch (err) {
+            } else {
                 router.push('/auth');
             }
         };
@@ -48,36 +48,24 @@ export default function RegisterProfilePage() {
 
         setIsLoading(true);
         try {
-            console.log("Starting profile submission...", { userId, name, govIdType });
-            let profileImageUrl = '';
-            
-            // 1. Upload Image if exists
+            const formData = new FormData();
+            formData.append('userId', userId);
+            formData.append('name', name);
+            formData.append('govIdType', govIdType);
+            formData.append('govIdNumber', govIdNumber);
             if (imageFile) {
-                console.log("Uploading profile image...");
-                const upload = await storage.createFile(
-                    PROFILE_IMAGES_BUCKET_ID,
-                    'unique()',
-                    imageFile
-                );
-                profileImageUrl = storage.getFileView(PROFILE_IMAGES_BUCKET_ID, upload.$id).toString();
-                console.log("Image uploaded successfully:", profileImageUrl);
+                formData.append('image', imageFile);
             }
 
-            // 2. Create Profile document
-            console.log("Creating document in collection 'user_profiles'...");
-            await createUserProfile({
-                userId,
-                name,
-                govIdType,
-                govIdNumber,
-                profileImageUrl
-            });
-            console.log("Profile created successfully! Redirecting to dashboard...");
-
-            router.replace('/dashboard');
+            const result = await createProfileWithImageAction(formData);
+            
+            if (result.success) {
+                router.replace('/dashboard');
+            } else {
+                setError(result.error || 'Failed to create profile.');
+            }
         } catch (err: any) {
-            console.error("Registration Error Detail:", err);
-            setError(err.message || 'Failed to complete registration. Check console for details.');
+            setError('An unexpected error occurred during profile creation.');
         } finally {
             setIsLoading(false);
         }

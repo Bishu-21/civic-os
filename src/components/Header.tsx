@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { User, Search, PlayCircle, ShieldCheck, LayoutGrid, LogOut } from "lucide-react";
 import { generateDemoData } from "@/lib/store";
-import { account } from "@/lib/appwrite";
+import { getCurrentUserAction, logoutAction } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 
 export default function Header() {
@@ -14,26 +14,18 @@ export default function Header() {
 
     useEffect(() => {
         const checkSession = async () => {
-            try {
-                const session = await account.get();
-                setIsLoggedIn(!!session);
-            } catch (err) {
-                // Not logged in or error
-                setIsLoggedIn(false);
-            } finally {
-                setIsLoading(false);
-            }
+            const { success } = await getCurrentUserAction();
+            setIsLoggedIn(success);
+            setIsLoading(false);
         };
         checkSession();
     }, []);
 
     const handleLogout = async () => {
         try {
-            await account.deleteSession("current");
+            await logoutAction();
             setIsLoggedIn(false);
             router.push("/");
-            // Force a refresh to update UI across the app if needed, 
-            // but state update + navigation should suffice.
             window.location.reload();
         } catch (error) {
             console.error("Logout failed:", error);
