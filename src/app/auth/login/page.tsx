@@ -129,7 +129,7 @@ export default function LoginPage() {
 
                     <div>
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Enter Captcha</label>
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3">
                             <input 
                                 type="text"
                                 maxLength={6}
@@ -138,7 +138,7 @@ export default function LoginPage() {
                                 className="flex-1 px-4 py-4 bg-slate-50 border border-slate-100 rounded-xl text-lg font-bold text-slate-800 placeholder:text-slate-300 focus:bg-white focus:border-gov-blue focus:ring-4 focus:ring-gov-blue/5 transition-all outline-none"
                                 placeholder="Type characters"
                             />
-                            <div className="w-32 bg-slate-100 rounded-xl flex items-center justify-center relative overflow-hidden group">
+                            <div className="h-14 sm:w-32 bg-slate-100 rounded-xl flex items-center justify-center relative overflow-hidden group">
                                 <span className="text-xl font-bold tracking-widest text-slate-400 select-none italic line-through decoration-slate-300">
                                     {captchaText}
                                 </span>
