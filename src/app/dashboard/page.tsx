@@ -154,12 +154,15 @@ export default function CitizenDashboard() {
                     setIsLoading(false);
                     clearTimeout(safetyTimeout);
 
-                    // Background enrichment
+                    // Background enrichment - Load insight from existing data to avoid redundant AI API calls
                     const currentComplaints = getComplaints(finalProfile.userId);
                     if (currentComplaints.length > 0) {
-                        analyzeIssueAction(currentComplaints[0].description)
-                            .then(insight => setAiInsight(insight))
-                            .catch(aiErr => console.warn("AI Insight Background Error:", aiErr));
+                        const latest = currentComplaints[0];
+                        setAiInsight({
+                            category: latest.category,
+                            priority: latest.priority,
+                            suggestedAction: `Assigned to ${latest.department} for rapid response.`
+                        });
                     }
                 } else if (!result.success && (result.error === 'NO_SESSION' || result.error?.includes('401'))) {
                     clearTimeout(safetyTimeout);
