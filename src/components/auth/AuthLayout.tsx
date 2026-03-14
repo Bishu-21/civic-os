@@ -14,9 +14,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
         <div className="min-h-screen bg-slate-50 flex flex-col">
             <header className="px-4 md:px-8 py-4 md:py-6 flex justify-between items-center bg-white border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-gov-blue rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-gov-blue/20">
-                        <ShieldCheck className="w-5 h-5 md:w-6 md:h-6" />
-                    </div>
+                    <img src="/logo1.png" alt="CivicOS Logo" className="w-10 h-10 object-contain" />
                     <span className="text-lg md:text-xl font-black text-slate-800 tracking-tight">CivicOS</span>
                 </div>
                 <div className="flex items-center gap-6">

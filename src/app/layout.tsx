@@ -16,6 +16,9 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "CivicOS | Municipal Corporation of Delhi",
   description: "Official AI-Powered PS-CRM for MCD - Building a Smarter, Cleaner Delhi.",
+  icons: {
+    icon: '/logo1.png',
+  },
 };
 
 export default function RootLayout({
@@ -30,6 +33,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
+        <link rel="icon" href="/logo1.png" sizes="any" />
         {children}
       </body>
     </html>

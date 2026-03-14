@@ -25,9 +25,7 @@ export default function Sidebar() {
     return (
         <div className="flex flex-col w-64 bg-white border-r border-gray-200 min-h-screen">
             <div className="flex items-center gap-3 px-6 py-8 border-b border-gray-100">
-                <div className="w-10 h-10 bg-mcd-navy rounded flex items-center justify-center text-white font-bold text-lg">
-                    MCD
-                </div>
+                <img src="/logo1.png" alt="MCD Logo" className="w-10 h-10 object-contain" />
                 <div className="flex flex-col">
                     <span className="text-sm font-bold text-mcd-navy leading-tight uppercase tracking-tight">MCD</span>
                     <span className="text-[10px] text-mcd-slate font-medium uppercase tracking-widest">Command Center</span>

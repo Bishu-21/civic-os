@@ -52,9 +52,9 @@ export default function Header() {
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-3">
                         <img 
-                            alt="National Emblem of India" 
-                            className="h-10 w-auto" 
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmy5Ef_ppiuApwYTUOPSSzx2qSSqyDIRCya4ZgsLXtA-Pzc6s1wx2wI3nqNaOB33AaKmR03aan-VxcZvqyXD1voY_CLjO4tBHLwc94Ui8Rbk2AMg7T7zFCCCYVR2NPzzvsuCoplmhcwnKjDVRIvmAzwojmceNy3NGqC4To5HBDvhoY8ZNQ423V_OnSqDvDXV7OHiMWKbuh5oZq9yERe7iBVgdzhSl4qLtRHfQ55iRMi3oqsY9QCn_Ce718MiDSkTvHqW7ornJLTg" 
+                            alt="MCD CivicOS Logo" 
+                            className="h-12 w-auto" 
+                            src="/logo1.png" 
                         />
                         <div className="hidden sm:block border-l border-slate-300 h-8 mx-2"></div>
                         <Link href="/" className="flex flex-col leading-none">
