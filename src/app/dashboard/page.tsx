@@ -242,9 +242,14 @@ export default function CitizenDashboard() {
                     clearTimeout(safetyTimeout);
                     router.replace('/auth/register');
                 } else {
-                    console.error("[DASHBOARD_CLIENT] Unexpected State:", result);
-                    setIsLoading(false);
-                    clearTimeout(safetyTimeout);
+                    console.log(`[DASHBOARD_CLIENT] Transitioning state:`, result);
+                    // Instead of hard error, wait for hydration or next retry
+                    if (retries < maxRetries) {
+                        retries++;
+                        setTimeout(initDashboard, 1500);
+                    } else {
+                        setIsLoading(false);
+                    }
                 }
             } catch (error: any) {
                 console.error("[DASHBOARD_CLIENT] Fatal Error during init:", error);

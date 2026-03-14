@@ -6,6 +6,7 @@ import { analyzeIssueAction } from "@/app/actions/ai";
 import { getCurrentUserAction } from "@/app/actions/auth";
 import { saveComplaint } from "@/lib/store";
 import { AnalysisResult, Complaint } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
 export default function Hero() {
     const [description, setDescription] = useState("");
@@ -13,6 +14,7 @@ export default function Hero() {
     const [result, setResult] = useState<AnalysisResult | null>(null);
     const [ticketId, setTicketId] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string>('anonymous');
+    const router = useRouter();
 
     useEffect(() => {
         const checkUser = async () => {
@@ -30,7 +32,7 @@ export default function Hero() {
         // Session Protection for AI Feature
         if (currentUserId === 'anonymous') {
             console.warn("[HERO] Unauthorized AI access attempt. Redirecting to login.");
-            window.location.href = '/auth';
+            router.push('/auth');
             return;
         }
 
@@ -86,10 +88,16 @@ export default function Hero() {
                     </p>
                     
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button className="w-full sm:w-auto px-8 py-4 bg-primary text-white text-lg font-bold rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
+                        <button 
+                            onClick={() => router.push(currentUserId === 'anonymous' ? '/auth' : '/dashboard')}
+                            className="w-full sm:w-auto px-8 py-4 bg-primary text-white text-lg font-bold rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                        >
                             Report an Issue
                         </button>
-                        <button className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-slate-300 text-slate-700 text-lg font-bold rounded-lg hover:bg-white transition-all">
+                        <button 
+                            onClick={() => router.push(currentUserId === 'anonymous' ? '/auth' : '/dashboard')}
+                            className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-slate-300 text-slate-700 text-lg font-bold rounded-lg hover:bg-white transition-all"
+                        >
                             Track Complaint Status
                         </button>
                     </div>

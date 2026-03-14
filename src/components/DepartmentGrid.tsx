@@ -1,7 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { Trash2, Zap, Construction, HeartPulse, Droplets, Flower2, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCurrentUserAction } from "@/app/actions/auth";
+import { useRouter } from "next/navigation";
 
 export default function DepartmentGrid() {
+    const [currentUserId, setCurrentUserId] = useState<string>('anonymous');
+    const router = useRouter();
+
     const departments = [
         { name: "Sanitation", icon: Trash2, description: "Waste collection & cleaning" },
         { name: "Electrical", icon: Zap, description: "Streetlights & power issues" },
@@ -10,6 +18,24 @@ export default function DepartmentGrid() {
         { name: "Water", icon: Droplets, description: "Leakage & supply management" },
         { name: "Horticulture", icon: Flower2, description: "Parks & greenery upkeep" },
     ];
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const { success, user } = await getCurrentUserAction();
+            if (success && user) {
+                setCurrentUserId(user.$id);
+            }
+        };
+        checkUser();
+    }, []);
+
+    const handleReportRedirect = (dept: string) => {
+        if (currentUserId === 'anonymous') {
+            router.push('/auth');
+        } else {
+            router.push(`/dashboard?ref=${encodeURIComponent(dept)}`);
+        }
+    };
 
     return (
         <section className="py-20 bg-background-light">
@@ -37,12 +63,12 @@ export default function DepartmentGrid() {
                             <p className="text-slate-500 text-sm leading-relaxed mb-6">
                                 {service.description}
                             </p>
-                            <Link
-                                href="#"
+                            <button
+                                onClick={() => handleReportRedirect(service.name)}
                                 className="text-primary font-bold inline-flex items-center gap-2 group-hover:gap-3 transition-all"
                             >
                                 Report Now <ArrowRight className="w-4 h-4" />
-                            </Link>
+                            </button>
                         </div>
                     ))}
                 </div>

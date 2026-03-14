@@ -70,19 +70,37 @@ export async function getServerProfileAction() {
         );
 
         if (response.documents.length > 0) {
-            const profile = JSON.parse(JSON.stringify(response.documents[0]));
-            return { success: true, isFullProfile: true, profile: profile as unknown as UserProfile };
+            const doc = response.documents[0];
+            const profile: UserProfile = {
+                userId: doc.userId,
+                name: doc.name || '',
+                govIdType: doc.govIdType || '',
+                govIdNumber: doc.govIdNumber || '',
+                profileImageUrl: doc.profileImageUrl || '',
+                email: doc.email || '',
+                address: doc.address || ''
+            };
+            return { 
+                success: true, 
+                isFullProfile: true, 
+                profile 
+            };
         }
 
         // If no DB profile exists, return null so caller can redirect to register
         return { 
             success: true, 
-            isFullProfile: false,
+            isFullProfile: false, 
             profile: null 
         };
     } catch (error: any) {
         console.error("[PROFILE_SERVER_V5] Error:", error.message);
-        return { success: false, isFullProfile: false, error: error.message };
+        return { 
+            success: false, 
+            isFullProfile: false, 
+            profile: null,
+            error: error.message || 'UNKNOWN_ERROR'
+        };
     }
 }
 
