@@ -13,10 +13,10 @@ export async function createPhoneTokenAction(mobile: string) {
             userId: finalUserId,
             phone: `+91${mobile}`
         });
-        return { success: true, userId: token.userId };
+        return JSON.parse(JSON.stringify({ success: true, userId: token.userId }));
     } catch (error: any) {
         console.error("Create Token Error:", error);
-        return { success: false, error: error.message };
+        return JSON.parse(JSON.stringify({ success: false, error: error.message }));
     }
 }
 
@@ -34,10 +34,10 @@ export async function setBridgeCookieAction(userId: string) {
             sameSite: 'lax',
             maxAge: 60 * 60 * 24 * 30 // 30 days
         });
-        return { success: true };
+        return JSON.parse(JSON.stringify({ success: true }));
     } catch (error: any) {
         console.error("[AUTH_ACTION] Set Bridge Cookie Error:", error);
-        return { success: false, error: error.message };
+        return JSON.parse(JSON.stringify({ success: false, error: error.message }));
     }
 }
 
@@ -85,10 +85,10 @@ export async function getCurrentUserAction() {
             status: user.status
         };
 
-        return { success: true, user: sanitizedUser };
+        return JSON.parse(JSON.stringify({ success: true, user: sanitizedUser }));
     } catch (error: any) {
         console.error("[AUTH_ACTION] Get Current User Error:", error.message);
-        return { success: false, error: error.message };
+        return JSON.parse(JSON.stringify({ success: false, error: error.message }));
     }
 }
 
@@ -111,8 +111,8 @@ export async function logoutAction() {
         // Standard Appwrite cookies are usually deleted by setSession(null) or similar, 
         // but here we let them expire or manually clear if we knew the names.
         
-        return { success: true };
+        return JSON.parse(JSON.stringify({ success: true }));
     } catch (error: any) {
-        return { success: false, error: error.message };
+        return JSON.parse(JSON.stringify({ success: false, error: error.message }));
     }
 }

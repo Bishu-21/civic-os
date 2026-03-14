@@ -44,7 +44,7 @@ export async function getServerProfileAction() {
         if (!sessionSecret) {
             if (bridgeUserId) {
                 console.log(`[PROFILE_SERVER_V5] Falling back to Bridge UI for UID: ${bridgeUserId}`);
-                return { 
+                return JSON.parse(JSON.stringify({ 
                     success: true, 
                     isFullProfile: false,
                     profile: { 
@@ -53,9 +53,9 @@ export async function getServerProfileAction() {
                         govIdType: 'Verified', 
                         govIdNumber: '****' 
                     } as UserProfile 
-                };
+                }));
             }
-            return { success: false, error: 'NO_SESSION' };
+            return JSON.parse(JSON.stringify({ success: false, error: 'NO_SESSION' }));
         }
 
         // Real Session Fetch
@@ -80,27 +80,27 @@ export async function getServerProfileAction() {
                 email: doc.email || '',
                 address: doc.address || ''
             };
-            return { 
+            return JSON.parse(JSON.stringify({ 
                 success: true, 
                 isFullProfile: true, 
                 profile 
-            };
+            }));
         }
 
         // If no DB profile exists, return null so caller can redirect to register
-        return { 
+        return JSON.parse(JSON.stringify({ 
             success: true, 
             isFullProfile: false, 
             profile: null 
-        };
+        }));
     } catch (error: any) {
         console.error("[PROFILE_SERVER_V5] Error:", error.message);
-        return { 
+        return JSON.parse(JSON.stringify({ 
             success: false, 
             isFullProfile: false, 
             profile: null,
             error: error.message || 'UNKNOWN_ERROR'
-        };
+        }));
     }
 }
 
@@ -112,11 +112,11 @@ export async function updateUserProfileAction(data: Partial<UserProfile>) {
         const cookieStore = await cookies();
         const sessionSecret = cookieStore.getAll().find(c => c.name.startsWith('a_session_'))?.value;
 
-        if (!sessionSecret) return { success: false, error: 'NO_SESSION' };
+        if (!sessionSecret) return JSON.parse(JSON.stringify({ success: false, error: 'NO_SESSION' }));
 
         const { databases } = createAppwriteClient(sessionSecret);
         
-        if (!data.userId) return { success: false, error: 'USER_ID_REQUIRED' };
+        if (!data.userId) return JSON.parse(JSON.stringify({ success: false, error: 'USER_ID_REQUIRED' }));
 
         const response = await databases.listDocuments(
             DATABASE_ID,
@@ -125,7 +125,7 @@ export async function updateUserProfileAction(data: Partial<UserProfile>) {
         );
 
         if (response.documents.length === 0) {
-            return { success: false, error: 'PROFILE_NOT_FOUND' };
+            return JSON.parse(JSON.stringify({ success: false, error: 'PROFILE_NOT_FOUND' }));
         }
 
         const docId = response.documents[0].$id;
@@ -136,9 +136,9 @@ export async function updateUserProfileAction(data: Partial<UserProfile>) {
             data
         );
 
-        return { success: true, profile: JSON.parse(JSON.stringify(result)) as UserProfile };
+        return JSON.parse(JSON.stringify({ success: true, profile: result }));
     } catch (error: any) {
-        return { success: false, error: error.message };
+        return JSON.parse(JSON.stringify({ success: false, error: error.message }));
     }
 }
 
@@ -150,7 +150,7 @@ export async function createProfileWithImageAction(formData: FormData) {
         const cookieStore = await cookies();
         const sessionSecret = cookieStore.getAll().find(c => c.name.startsWith('a_session_'))?.value;
 
-        if (!sessionSecret) return { success: false, error: 'NO_SESSION' };
+        if (!sessionSecret) return JSON.parse(JSON.stringify({ success: false, error: 'NO_SESSION' }));
 
         const { databases, storage } = createAppwriteClient(sessionSecret);
         const userId = formData.get('userId') as string;
@@ -180,8 +180,8 @@ export async function createProfileWithImageAction(formData: FormData) {
             profile
         );
 
-        return { success: true, data: result };
+        return JSON.parse(JSON.stringify({ success: true, data: result }));
     } catch (error: any) {
-        return { success: false, error: error.message };
+        return JSON.parse(JSON.stringify({ success: false, error: error.message }));
     }
 }

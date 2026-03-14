@@ -53,7 +53,7 @@ export default function Footer() {
                 </div>
 
                 <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-[10px] md:text-sm">
-                    <p>© 2024 Municipal Corporation of Delhi. All rights reserved.</p>
+                    <p>© 2026 Municipal Corporation of Delhi. All rights reserved.</p>
                     <div className="flex gap-6">
                         <Link href="#" className="hover:text-white">Privacy Policy</Link>
                         <Link href="#" className="hover:text-white">Terms of Service</Link>

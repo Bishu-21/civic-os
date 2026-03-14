@@ -43,7 +43,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
 
             <footer className="py-10 flex flex-col items-center gap-6">
                 <p className="text-[9px] text-slate-400 font-medium opacity-60">
-                    © 2024 CivicOS - Municipal Corporation Digital Infrastructure. All rights reserved.
+                    © 2026 CivicOS - Municipal Corporation Digital Infrastructure. All rights reserved.
                 </p>
             </footer>
         </div>

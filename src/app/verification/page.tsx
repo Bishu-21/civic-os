@@ -255,7 +255,7 @@ export default function VerificationPage() {
                     <CheckSquare className="w-4 h-4 text-green-500" /> Compliant with GIGW & WCAG 2.1 standards
                 </div>
                 <div>
-                    © 2023 MUNICIPAL CORPORATION OF DELHI | CIVICOS V2.4.0
+                    © 2026 MUNICIPAL CORPORATION OF DELHI | CIVICOS V2.4.0
                 </div>
                 <div className="flex gap-6">
                     <a href="#" className="hover:text-mcd-navy transition-colors">Help Desk</a>
