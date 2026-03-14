@@ -69,7 +69,15 @@ export default function LoginPage() {
             return;
         }
 
+        if (!userId) {
+            console.error('[LOGIN] Missing userId for OTP verification');
+            setError('Verification session expired. Please request a new OTP.');
+            setStep('input');
+            return;
+        }
+
         setIsLoading(true);
+        console.log(`[LOGIN] Starting verification for UID: ${userId}`);
         try {
             // Check if a session already exists to avoid "session active" error
             try {
@@ -80,19 +88,28 @@ export default function LoginPage() {
             }
 
             // 2. Verify OTP and Create Session ON CLIENT directly in Browser
+            console.log('[LOGIN] Updating phone session...');
             const session = await account.updatePhoneSession(userId, otpValue);
+            console.log('[LOGIN] Client session created:', !!session);
             
             // 3. Set fallback bridge cookie for layout
+            console.log('[LOGIN] Setting bridge cookie via server action...');
             const handoffResult = await setBridgeCookieAction(userId);
+            console.log('[LOGIN] Handoff result:', handoffResult);
             
             if (session && handoffResult.success) {
                 setSuccess('Authenticated successfully! Redirecting...');
                 
                 // Check if profile exists; if not, redirect to /auth/register
+                console.log('[LOGIN] Verifying profile existence...');
                 const userResult = await getCurrentUserAction();
+                console.log('[LOGIN] Profile check result:', userResult);
+
                 if (userResult.success && !userResult.user?.name) {
+                    console.log('[LOGIN] No profile found, routing to register');
                     window.location.href = '/auth/register';
                 } else {
+                    console.log('[LOGIN] Profile found or fallback, routing to dashboard');
                     window.location.href = '/dashboard';
                 }
             } else {

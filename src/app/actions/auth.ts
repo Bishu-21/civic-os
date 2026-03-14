@@ -25,6 +25,7 @@ export async function createPhoneTokenAction(mobile: string) {
  */
 export async function setBridgeCookieAction(userId: string) {
     try {
+        console.log(`[AUTH_ACTION] Setting bridge cookie for UID: ${userId}`);
         const cookieStore = await cookies();
         cookieStore.set('civic_auth_verified', userId, {
             path: '/',
@@ -35,7 +36,7 @@ export async function setBridgeCookieAction(userId: string) {
         });
         return { success: true };
     } catch (error: any) {
-        console.error("Set Bridge Cookie Error:", error);
+        console.error("[AUTH_ACTION] Set Bridge Cookie Error:", error);
         return { success: false, error: error.message };
     }
 }
@@ -45,12 +46,16 @@ export async function setBridgeCookieAction(userId: string) {
  */
 export async function getCurrentUserAction() {
     try {
+        console.log(`[AUTH_ACTION] Fetching current user...`);
         const cookieStore = await cookies();
         const headerStore = await headers();
         const rawCookies = headerStore.get('cookie') || '';
         
+        // Appwrite cookies check
         let sessionSecret = cookieStore.getAll().find(c => c.name.startsWith('a_session_'))?.value;
         const bridgeUserId = cookieStore.get('civic_auth_verified')?.value;
+
+        console.log(`[AUTH_ACTION] Session preset: ${!!sessionSecret}, Bridge: ${!!bridgeUserId}`);
 
         if (!sessionSecret) {
             sessionSecret = headerStore.get('x-civic-session') || undefined;
@@ -60,12 +65,29 @@ export async function getCurrentUserAction() {
             }
         }
 
-        if (!sessionSecret && !bridgeUserId) return { success: false, error: 'NO_SESSION' };
+        if (!sessionSecret && !bridgeUserId) {
+            console.warn(`[AUTH_ACTION] No session found`);
+            return { success: false, error: 'NO_SESSION' };
+        }
 
         const { account: serverAccount } = createAppwriteClient(sessionSecret);
         const user = await serverAccount.get();
-        return { success: true, user: JSON.parse(JSON.stringify(user)) };
+        
+        console.log(`[AUTH_ACTION] User found: ${user.$id} (${user.name})`);
+
+        // Strict serialization to avoid "unexpected response" (Next.js crash on complex objects)
+        const sanitizedUser = {
+            $id: user.$id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            registration: user.registration,
+            status: user.status
+        };
+
+        return { success: true, user: sanitizedUser };
     } catch (error: any) {
+        console.error("[AUTH_ACTION] Get Current User Error:", error.message);
         return { success: false, error: error.message };
     }
 }
