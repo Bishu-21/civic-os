@@ -16,12 +16,12 @@ export async function reverseGeocodeAction(lat: number, lon: number) {
         
         if (data.features && data.features.length > 0) {
             const address = data.features[0].properties.formatted;
-            return { success: true, address };
+            return JSON.parse(JSON.stringify({ success: true, address }));
         }
 
-        return { success: false, error: "NO_ADDRESS_FOUND" };
+        return JSON.parse(JSON.stringify({ success: false, error: "NO_ADDRESS_FOUND" }));
     } catch (error) {
         console.error("Reverse Geocoding Error:", error);
-        return { success: false, error: "FETCH_FAILED" };
+        return JSON.parse(JSON.stringify({ success: false, error: "FETCH_FAILED" }));
     }
 }

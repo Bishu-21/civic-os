@@ -7,19 +7,22 @@ import { transcribeAudio, textToSpeech } from "@/lib/sarvam";
  * Server Action to analyze civic issues using Gemini library
  */
 export async function analyzeIssueAction(description: string) {
-    return await analyzeIssue(description);
+    const result = await analyzeIssue(description);
+    return JSON.parse(JSON.stringify(result));
 }
 
 /**
  * Server Action for Sarvam Transcription using library
  */
 export async function transcribeAudioAction(base64Audio: string) {
-    return await transcribeAudio(base64Audio);
+    const result = await transcribeAudio(base64Audio);
+    return JSON.parse(JSON.stringify(result));
 }
 
 /**
  * Server Action for Sarvam TTS using library
  */
 export async function textToSpeechAction(text: string, speaker: string = "shubh", languageCode: string = "hi-IN") {
-    return await textToSpeech(text, speaker, languageCode);
+    const result = await textToSpeech(text, speaker, languageCode);
+    return JSON.parse(JSON.stringify(result));
 }

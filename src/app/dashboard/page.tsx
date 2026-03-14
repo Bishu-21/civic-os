@@ -209,7 +209,8 @@ export default function CitizenDashboard() {
                     }
                 }
 
-                if (finalProfile && result.isFullProfile) {
+                // SUCCESS: We have a profile (either from server or client recovery)
+                if (finalProfile && finalProfile.name && !finalProfile.name.includes('Bridge')) {
                     console.log(`[DASHBOARD_CLIENT] Final Full Profile Resolved:`, finalProfile.userId);
                     setUserProfile(finalProfile);
                     
@@ -217,7 +218,7 @@ export default function CitizenDashboard() {
                     setIsLoading(false);
                     clearTimeout(safetyTimeout);
 
-                    // Background enrichment - Load insight from existing data
+                    // Background enrichment
                     const currentComplaints = getComplaints(finalProfile.userId);
                     if (currentComplaints.length > 0) {
                         const latest = currentComplaints[0];
@@ -227,23 +228,23 @@ export default function CitizenDashboard() {
                             suggestedAction: `Assigned to ${latest.department} for rapid response.`
                         });
                     }
-                } else if (!result.success && (result.error === 'NO_SESSION' || result.error?.includes('401'))) {
-                    clearTimeout(safetyTimeout);
-                    if (retries < maxRetries) {
-                        retries++;
-                        console.log(`[DASHBOARD_CLIENT] Session missing/401, retrying ${retries}/${maxRetries}...`);
-                        setTimeout(initDashboard, 1000);
-                    } else {
-                        console.log(`[DASHBOARD_CLIENT] Max retries reached. Redirecting to auth.`);
-                        router.replace('/auth');
-                    }
-                } else if (result.success && !result.isFullProfile) {
-                    console.log(`[DASHBOARD_CLIENT] Profile incomplete or Bridge only. Redirecting to register.`);
+                } 
+                // REDIRECT: Session exists but profile is missing
+                else if (result.success && (!finalProfile || finalProfile.name.includes('Bridge'))) {
+                    console.log(`[DASHBOARD_CLIENT] Profile missing. Redirecting to register.`);
+                    setIsLoading(false); // Stop spinner before redirect
                     clearTimeout(safetyTimeout);
                     router.replace('/auth/register');
-                } else {
+                }
+                // ERROR: No session
+                else if (!result.success && (result.error === 'NO_SESSION' || result.error?.includes('401'))) {
+                    console.log(`[DASHBOARD_CLIENT] Session missing/401. Redirecting to auth.`);
+                    setIsLoading(false);
+                    clearTimeout(safetyTimeout);
+                    router.replace('/auth');
+                }
+                else {
                     console.log(`[DASHBOARD_CLIENT] Transitioning state:`, result);
-                    // Instead of hard error, wait for hydration or next retry
                     if (retries < maxRetries) {
                         retries++;
                         setTimeout(initDashboard, 1500);

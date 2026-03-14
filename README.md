@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CivicOS: AI-Powered Citizen Grievance System
 
-## Getting Started
+**CivicOS** is a high-fidelity Minimum Viable Product (MVP) designed for the **Municipal Corporation of Delhi (MCD)**. It leverages AI and modern cloud infrastructure to revolutionize how citizens report, track, and verify civic grievances.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🏛️ Project Vision
+CivicOS aims to bridge the gap between citizens and municipal authorities. By using AI-driven reporting and spatial mapping, it ensures that every streetlight, pothole, or waste issue is documented with precision and resolved with accountability.
+
+## 🚀 Key Features
+
+### 1. AI Quick-Report
+- **Multi-Modal Input**: Report issues via text, voice, or image.
+- **AI Analysis**: Powered by **Gemini 2.5 Flash Lite**, the system automatically categorizes issues (e.g., Sanitation, Electrical), estimates priority, and identifies the correct department.
+- **Automated Routing**: Grievances are directed to the specific ward office based on geocoding.
+
+### 2. Digital Identity & DPDP Compliance
+- **Secure Authentication**: OTP-based mobile registration and login via **Appwrite**.
+- **Privacy First**: Fully compliant with the **Digital Personal Data Protection (DPDP) Act, 2023**, ensuring citizen data is handled securely.
+- **Government-Grade UI**: Designed following GIGW and WCAG 2.1 standards for accessibility.
+
+### 3. Spatial Intelligence Map
+- **Interactive Mapping**: Powered by **Leaflet & OpenStreetMap**.
+- **Reverse Geocoding**: Automatically identifies the exact address and ward of a grievance using **Geoapify**.
+- **Hotspot Visualization**: Administrators can see clusters of reported issues for better resource allocation.
+
+### 4. Transparent Resolution
+- **Track Status**: Real-time status updates from "Reported" to "Resolved".
+- **Verification Workflow**: Citizens can verify the quality of work via the platform.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology | Usage |
+| :--- | :--- | :--- |
+| **Frontend** | [Next.js 16](https://nextjs.org/) | App Router, React, Turbopack |
+| **Styling** | [TailwindCSS](https://tailwindcss.com/) | Responsive, Premium UI Design |
+| **Backend** | [Appwrite](https://appwrite.io/) | Auth, Database, Storage, Sessions |
+| **AI/ML** | [Google Gemini](https://ai.google.dev/) | Issue Analysis & Prioritization |
+| **GEO** | [Geoapify](https://www.geoapify.com/) | Reverse Geocoding API |
+| **Maps** | [Leaflet](https://leafletjs.org/) | Interactive Spatial Interface |
+
+---
+
+## 📦 Getting Started
+
+### Prerequisites
+- Node.js 18.x or higher
+- Appwrite Instance (Cloud or Self-Hosted)
+
+### Environment Variables
+Create a `.env.local` file with the following:
+```env
+NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_APPWRITE_DATABASE_ID=your_db_id
+NEXT_PUBLIC_APPWRITE_PROFILES_COLLECTIONID=your_collection_id
+GEMINI_API_KEY=your_gemini_key
+GEOAPIFY_API_KEY=your_geoapify_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
+```bash
+npm install
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📅 Roadmap
+- [x] OTP Authentication Flow
+- [x] AI Issue Analysis
+- [x] Spatial Map Integration
+- [x] Mobile Responsiveness Overhaul (2026 Build)
+- [ ] Blockchain-based verification ledger (Future)
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📜 License
+© 2026 Municipal Corporation of Delhi. All rights reserved.
+Developed for the MCD Civic Innovation Challenge.

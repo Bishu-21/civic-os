@@ -25,6 +25,12 @@ export default function RegisterProfilePage() {
             const { success, user } = await getCurrentUserAction();
             if (success && user) {
                 setUserId(user.$id);
+                
+                // If user already has a name/profile, they shouldn't be here
+                if (user.name && !user.name.includes('Bridge')) {
+                    console.log("[REGISTER] Profile already exists, redirecting to dashboard");
+                    router.replace('/dashboard');
+                }
             } else if (retries < maxRetries) {
                 retries++;
                 console.log(`[REGISTER] Session not found, retry ${retries}/${maxRetries}...`);
