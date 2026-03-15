@@ -41,7 +41,7 @@ import { reverseGeocodeAction } from "@/app/actions/geo";
 import { getComplaints, updateComplaint, getStats, syncGrievances } from "@/lib/store";
 import { Complaint } from "@/lib/types";
 import { analyzeIssueAction, transcribeAudioAction, textToSpeechAction } from "@/app/actions/ai";
-import { getGrievancesAction } from "@/app/actions/grievance";
+import { getGrievancesAction, createGrievanceAction } from "@/app/actions/grievance";
 import { generateGrievancePDF } from "@/lib/pdf";
 
 export default function CitizenDashboard() {
@@ -151,24 +151,76 @@ export default function CitizenDashboard() {
     const loadData = async (uid: string) => {
         // First try to load from cloud for fresh data
         console.log(`[DASHBOARD_CLIENT] Fetching cloud grievances for sync...`);
+        let cloudGrievances: Complaint[] = [];
         try {
             const cloudRes = await getGrievancesAction();
             if (cloudRes.success && cloudRes.grievances) {
-                syncGrievances(cloudRes.grievances, uid);
+                cloudGrievances = cloudRes.grievances.map(doc => ({
+                    id: doc.$id || doc.id,
+                    userId: doc.userId,
+                    description: doc.description,
+                    category: doc.category,
+                    priority: doc.priority,
+                    department: doc.department,
+                    ward: doc.ward,
+                    lat: doc.lat,
+                    lng: doc.lng,
+                    status: doc.status || 'Pending',
+                    assignedTo: doc.assignedTo,
+                    createdAt: doc.createdAt || doc.$createdAt,
+                    citizenPhoto: doc.citizenPhoto,
+                    repairPhoto: doc.repairPhoto
+                } as Complaint));
+                syncGrievances(cloudGrievances, uid);
             }
         } catch (e) {
             console.warn("[DASHBOARD_CLIENT] Cloud sync failed, falling back to local storage:", e);
         }
 
-        const allComplaints = getComplaints(uid);
-        const filtered = allComplaints.filter(c => 
-            c.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            c.ward.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.description.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setComplaints(filtered);
+        const localComplaints = getComplaints(uid);
+        
+        // Immediate UI feedback with local data
+        const initialFiltered = localComplaints.filter(c => {
+            const term = searchTerm.toLowerCase();
+            return (
+                (c.id?.toLowerCase() || "").includes(term) || 
+                (c.ward?.toLowerCase() || "").includes(term) ||
+                (c.category?.toLowerCase() || "").includes(term) ||
+                (c.description?.toLowerCase() || "").includes(term)
+            );
+        });
+        setComplaints(initialFiltered);
         setStats(getStats(uid));
+
+        // Background SYNC: Push local-only grievances to cloud
+        const unsynced = localComplaints.filter(lc => 
+            lc.userId !== 'demo-user' && 
+            !cloudGrievances.find(cg => cg.id === lc.id)
+        );
+
+        if (unsynced.length > 0) {
+            console.log(`[DASHBOARD_CLIENT] Pushing ${unsynced.length} unsynced grievances...`);
+            // Run sync sequentially with small delay to prevent rate limits
+            const syncAll = async () => {
+                for (const g of unsynced) {
+                    try {
+                        const res = await createGrievanceAction(g);
+                        if (res.success) console.log(`[DASHBOARD_CLIENT] Synced: ${g.id}`);
+                        // Wait 100ms between to be safe
+                        await new Promise(r => setTimeout(r, 100));
+                    } catch (err) { console.error(`[DASHBOARD_CLIENT] Sync error for ${g.id}:`, err); }
+                }
+                
+                // Final re-fetch to ensure local store is perfectly synced with cloud IDs/states
+                const finalRes = await getGrievancesAction();
+                if (finalRes.success && finalRes.grievances) {
+                    syncGrievances(finalRes.grievances, uid);
+                    setComplaints(getComplaints(uid));
+                    setStats(getStats(uid));
+                }
+            };
+            syncAll();
+        }
     };
 
     useEffect(() => {
@@ -630,10 +682,23 @@ export default function CitizenDashboard() {
                                     </button>
                                 </Link>
                                 <button 
-                                    onClick={refreshFeed}
-                                    className="px-4 py-2.5 bg-slate-50 text-gov-blue rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-gov-blue/5 transition-colors"
+                                    onClick={async () => {
+                                        if (userProfile) {
+                                            setIsRefreshing(true);
+                                            await loadData(userProfile.userId);
+                                            setIsRefreshing(false);
+                                        }
+                                    }}
+                                    className="px-4 py-2.5 bg-gov-blue text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-600 transition-all shadow-md shadow-blue-100 active:scale-95"
                                 >
-                                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> <span className="hidden sm:inline">Refresh</span>
+                                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} /> 
+                                    <span>Sync Cloud Digits</span>
+                                </button>
+                                <button 
+                                    onClick={refreshFeed}
+                                    className="px-4 py-2.5 bg-slate-50 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-100 transition-colors"
+                                >
+                                    <Search className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Refresh</span>
                                 </button>
                             </div>
                         </div>

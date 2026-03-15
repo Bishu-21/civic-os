@@ -21,15 +21,25 @@ import {
     Settings,
     Loader2,
     Menu,
-    X
+    X,
+    Map as MapIcon,
+    Sparkles,
+    CheckCircle,
+    Clock3,
+    Target,
+    LogOut as LogoutIcon
 } from "lucide-react";
 import Link from "next/link";
-import { getAllGrievancesAction } from "@/app/actions/grievance";
+import { getAllGrievancesAction, createGrievanceAction } from "@/app/actions/grievance";
 import { getServerProfileAction, updateUserProfileAction, UserProfile } from "@/app/actions/profile";
 import { logoutAction } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 import { syncGrievances, getComplaints, getStats, generateDemoData } from "@/lib/store";
 import { reverseGeocodeAction } from "@/app/actions/geo";
+import MapSidebar from "@/components/map/MapSidebar";
+import MobileMapDrawer from "@/components/map/MobileMapDrawer";
+import MapInfoCard from "@/components/map/MapInfoCard";
+import { Complaint } from "@/lib/types";
 
 // Dynamic import for Leaflet map to avoid SSR errors
 const MapComponent = dynamic(() => import("@/components/MapComponent"), { 
@@ -46,8 +56,8 @@ const MapComponent = dynamic(() => import("@/components/MapComponent"), {
 
 export default function MapPage() {
     const router = useRouter();
-    const [grievances, setGrievances] = useState<any[]>([]);
-    const [filteredGrievances, setFilteredGrievances] = useState<any[]>([]);
+    const [grievances, setGrievances] = useState<Complaint[]>([]);
+    const [filteredGrievances, setFilteredGrievances] = useState<Complaint[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -66,10 +76,13 @@ export default function MapPage() {
     });
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
+    const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
     
     // Filters
     const [selectedCategories, setSelectedCategories] = useState<string[]>(['Streetlight', 'Garbage', 'Water Leakage', 'Road Damage', 'Encroachment', 'Other']);
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['Pending', 'In Progress', 'Resolved']);
+
+    const categories = ['Streetlight', 'Garbage', 'Water Leakage', 'Road Damage', 'Encroachment', 'Other'];
 
     const handleLocationTrack = () => {
         if ("geolocation" in navigator) {
@@ -99,8 +112,7 @@ export default function MapPage() {
                 const profileRes = await getServerProfileAction();
                 let finalProfile = profileRes.profile;
 
-                // Client-side recovery fallback
-                if (profileRes.success && (!finalProfile || finalProfile.name.includes('Bridge'))) {
+                if (profileRes.success && (!finalProfile || (finalProfile as any).name?.includes('Bridge'))) {
                     try {
                         const { account: browserAccount, databases: browserDatabases, DATABASE_ID, PROFILES_COLLECTION_ID } = await import('@/lib/appwrite');
                         const { Query } = await import('appwrite');
@@ -114,14 +126,13 @@ export default function MapPage() {
 
                 if (finalProfile) {
                     setUserProfile(finalProfile as UserProfile);
-                    // Tier 1: Load Global Local Data Instantly
                     const cachedData = getComplaints();
                     const normalized = cachedData.map(g => {
                         let category = g.category;
                         if ((category as any) === 'Garbage Collection') category = 'Garbage' as any;
                         if ((category as any) === 'Street Light') category = 'Streetlight' as any;
                         if ((category as any) === 'Road Repair') category = 'Road Damage' as any;
-                        return { ...g, category };
+                        return { ...g, category } as Complaint;
                     });
                     if (normalized.length > 0) {
                         setGrievances(normalized);
@@ -133,26 +144,78 @@ export default function MapPage() {
                     return;
                 }
 
-                // Tier 2: Background Sync (Parallel)
                 const fetchAndSync = async () => {
                     try {
+                        const localComplaints = getComplaints((finalProfile as UserProfile).userId);
+                        const rawData = localComplaints.map(g => {
+                            let category = g.category;
+                            if ((category as any) === 'Garbage Collection') category = 'Garbage' as any;
+                            if ((category as any) === 'Street Light') category = 'Streetlight' as any;
+                            if ((category as any) === 'Road Repair') category = 'Road Damage' as any;
+                            return { ...g, category } as Complaint;
+                        });
+                        setGrievances(rawData);
+                        setFilteredGrievances(rawData);
+                        setIsLoading(false);
+
                         const grievancesRes = await getAllGrievancesAction();
+                        let cloudGrievances: Complaint[] = [];
                         if (grievancesRes.success && grievancesRes.grievances) {
-                            syncGrievances(grievancesRes.grievances, (finalProfile as UserProfile).userId);
-                            
-                            // Normalize data after sync to fix mismatches
-                            const rawData = getComplaints();
-                            const normalized = rawData.map(g => {
-                                let category = g.category;
-                                if ((category as any) === 'Garbage Collection') category = 'Garbage' as any;
-                                if ((category as any) === 'Street Light') category = 'Streetlight' as any;
-                                if ((category as any) === 'Road Repair') category = 'Road Damage' as any;
-                                return { ...g, category };
-                            });
-                            setGrievances(normalized);
-                        } else if (getComplaints().length === 0) {
+                            cloudGrievances = grievancesRes.grievances.map(doc => ({
+                                id: doc.$id || doc.id,
+                                userId: doc.userId,
+                                description: doc.description,
+                                category: doc.category,
+                                priority: doc.priority,
+                                department: doc.department,
+                                ward: doc.ward,
+                                lat: doc.lat,
+                                lng: doc.lng,
+                                status: doc.status || 'Pending',
+                                assignedTo: doc.assignedTo,
+                                createdAt: doc.createdAt || doc.$createdAt,
+                                citizenPhoto: doc.citizenPhoto,
+                                repairPhoto: doc.repairPhoto
+                            } as Complaint));
+                            syncGrievances(cloudGrievances, (finalProfile as UserProfile).userId);
+                        }
+
+                        // SYNC: Push local-only grievances to cloud
+                        const unsynced = localComplaints.filter(lc => 
+                            lc.userId !== 'demo-user' && 
+                            !cloudGrievances.find(cg => cg.id === lc.id)
+                        );
+
+                        if (unsynced.length > 0) {
+                            console.log(`[MAP_SYNC] Found ${unsynced.length} unsynced. Pushing...`);
+                            const syncMapAll = async () => {
+                                for (const g of unsynced) {
+                                    try {
+                                        await createGrievanceAction(g);
+                                        await new Promise(r => setTimeout(r, 100)); // Rate limit safety
+                                    } catch (err) { console.error("Sync failed for", g.id, err); }
+                                }
+                                const refreshRes = await getAllGrievancesAction();
+                                if (refreshRes.success && refreshRes.grievances) {
+                                    syncGrievances(refreshRes.grievances, (finalProfile as UserProfile).userId);
+                                    const rawData = getComplaints().map(g => {
+                                        let category = g.category;
+                                        if ((category as any) === 'Garbage Collection') category = 'Garbage' as any;
+                                        if ((category as any) === 'Street Light') category = 'Streetlight' as any;
+                                        if ((category as any) === 'Road Repair') category = 'Road Damage' as any;
+                                        return { ...g, category } as Complaint;
+                                    });
+                                    setGrievances(rawData);
+                                    setFilteredGrievances(rawData);
+                                }
+                            };
+                            syncMapAll();
+                        }
+
+                        if (rawData.length === 0 && !grievancesRes.success) {
                             generateDemoData();
-                            setGrievances(getComplaints());
+                            const demoData = getComplaints() as unknown as Complaint[];
+                            setGrievances(demoData);
                         }
                     } catch (e) { console.warn("Global Background Sync failed:", e); }
                     finally { setIsLoading(false); }
@@ -223,14 +286,11 @@ export default function MapPage() {
     };
 
     const handleTrackTicket = (ticketId: string) => {
-        // Logically redirect to dashboard with search context or deep link
         router.push(`/dashboard?ticketId=${ticketId}`);
     };
 
     const handleExportData = () => {
         if (filteredGrievances.length === 0) return;
-        
-        // Logical CSV export of current filtered view
         const headers = ["Ticket ID", "Category", "Status", "Ward", "Description", "Latitude", "Longitude", "Created At"];
         const rows = filteredGrievances.map(g => [
             g.id,
@@ -242,7 +302,6 @@ export default function MapPage() {
             g.lng,
             g.createdAt
         ]);
-
         const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -254,389 +313,206 @@ export default function MapPage() {
         document.body.removeChild(link);
     };
 
-
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-white">
-            {/* Header - Stitch Design */}
-            <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 py-3 z-30">
-                <div className="flex items-center gap-4 md:gap-8">
+            {/* Header - Premium Unified Design */}
+            <header className="flex items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur-xl px-4 md:px-6 py-3 z-30 sticky top-0">
+                {/* Desktop Left / Mobile Menu */}
+                <div className="flex items-center gap-4 md:gap-8 flex-1 lg:flex-initial">
                     <button 
                         onClick={() => setShowMobileFilters(true)}
-                        className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 lg:hidden"
+                        className="p-2 hover:bg-slate-100 rounded-xl text-gov-blue lg:hidden"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
 
-                    <Link href="/dashboard" className="flex items-center gap-2 md:gap-3 group">
+                    <Link href="/dashboard" className="hidden lg:flex items-center gap-3 group">
                         <div className="bg-gov-blue p-1.5 rounded-lg text-white group-hover:bg-blue-800 transition-colors">
-                            <LayoutDashboard className="w-5 h-5" />
+                            <MapIcon className="w-5 h-5 shadow-lg" />
                         </div>
-                        <div className="hidden xs:block">
-                            <h1 className="text-gov-blue text-sm md:text-lg font-bold leading-tight tracking-tight">CivicOS</h1>
-                            <p className="text-[8px] md:text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Delhi Municipal Corporation</p>
+                        <div>
+                            <h1 className="text-gov-blue text-sm md:text-lg font-black leading-tight tracking-tight">CivicOS Map</h1>
+                            <p className="text-[10px] uppercase tracking-wider font-black text-slate-400">Spatial Intelligence Engine</p>
                         </div>
                     </Link>
-                    <nav className="hidden lg:flex items-center gap-6">
-                        <Link href="/dashboard" className="text-slate-600 text-sm font-bold hover:text-gov-blue transition-colors">Dashboard</Link>
-                        <span className="text-gov-blue text-sm font-bold border-b-2 border-gov-blue pb-1">Spatial Map</span>
-                        <Link href="/report" className="text-slate-600 text-sm font-bold hover:text-gov-blue transition-colors">File Report</Link>
+
+                    <nav className="hidden lg:flex items-center gap-6 ml-4">
+                        <Link href="/dashboard" className="text-slate-600 text-sm font-bold hover:text-gov-blue transition-all border-b-2 border-transparent hover:border-gov-blue/20 pb-0.5">Dashboard</Link>
+                        <span className="text-gov-blue text-sm font-black border-b-2 border-gov-blue pb-0.5">Spatial Map</span>
+                        <Link href="/report" className="text-slate-600 text-sm font-bold hover:text-gov-blue transition-all border-b-2 border-transparent hover:border-gov-blue/20 pb-0.5">File Report</Link>
                     </nav>
                 </div>
-                
-                    <div className="flex items-center gap-4">
-                        <div className="relative hidden sm:block">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                            <input 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm w-64 focus:ring-2 focus:ring-gov-blue font-bold text-slate-600 placeholder:text-slate-400" 
-                                placeholder="Find ward or issue..." 
-                                type="text"
-                            />
-                        </div>
-                        <div className="relative">
-                            <button 
-                                onClick={() => setShowNotifications(!showNotifications)}
-                                className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors relative"
-                            >
-                                <Bell className="w-5 h-5" />
-                                <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></div>
-                            </button>
 
-                            {showNotifications && (
-                                <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                                    <div className="p-4 border-b border-slate-50 bg-slate-50/50">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Notifications</p>
-                                    </div>
-                                    <div className="max-h-64 overflow-y-auto">
-                                        <div className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                            <p className="text-xs font-bold text-slate-800">Garbage Collection Alert</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Your area (Ward 88) has a scheduled cleanup at 10:00 AM tomorrow.</p>
-                                        </div>
-                                        <div className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                            <p className="text-xs font-bold text-slate-800">Status Update: #CIV-878564</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Your complaint has been assigned to a Field Officer.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="relative group">
-                            <div 
-                                onClick={() => setShowZoneMenu(!showZoneMenu)}
-                                className="flex items-center gap-2 text-slate-500 hover:text-gov-blue cursor-pointer transition-colors px-3 py-2 rounded-xl border border-transparent hover:border-slate-100"
-                            >
-                                <div className="flex flex-col items-start">
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest whitespace-nowrap">{activeZone}</span>
-                                        <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showZoneMenu ? 'rotate-180' : ''}`} />
-                                    </div>
-                                    {currentAddress && <span className="text-[8px] font-bold text-slate-400 truncate max-w-[80px] sm:max-w-[100px]">{currentAddress}</span>}
-                                </div>
-                            </div>
-                            
-                            {showZoneMenu && (
-                                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                                    {["All India", "North Zone", "South Zone", "East Zone", "West Zone", "Central Zone"].map((zone) => (
-                                        <button
-                                            key={zone}
-                                            onClick={() => {
-                                                setActiveZone(zone);
-                                                setShowZoneMenu(false);
-                                                handleLocationTrack();
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-gov-blue transition-colors"
-                                        >
-                                            {zone}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="relative flex items-center gap-3 pl-4 border-l border-slate-200">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-sm font-black text-slate-800 leading-none">{userProfile?.name || "Citizen"}</p>
-                                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest leading-none">Resident • {activeZone}</p>
-                            </div>
-                            <div className="relative">
-                                <div 
-                                    onClick={() => setShowProfileMenu(!showProfileMenu)}
-                                    className="w-10 h-10 rounded-xl overflow-hidden shadow-md cursor-pointer hover:ring-4 hover:ring-gov-blue/10 transition-all active:scale-95"
-                                >
-                                    {userProfile?.profileImageUrl ? (
-                                        <img src={userProfile.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">
-                                            <User className="w-6 h-6" />
-                                        </div>
-                                    )}
-                                </div>
-                                {showProfileMenu && (
-                                    <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                                        <button 
-                                            onClick={() => { setShowMyProfileModal(true); setShowProfileMenu(false); }}
-                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2"
-                                        >
-                                            <User className="w-3 h-3" /> My Profile
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                setProfileFormData({ email: userProfile?.email || "", address: userProfile?.address || "" });
-                                                setShowUpdateProfileModal(true);
-                                                setShowProfileMenu(false);
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2"
-                                        >
-                                            <Settings className="w-3 h-3" /> Update Profile
-                                        </button>
-                                        <div className="h-px bg-slate-50 my-1" />
-                                        <button 
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
-                                        >
-                                            <XCircle className="w-3 h-3" /> Logout
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                {/* Mobile Centered Title */}
+                <div className="flex-1 flex flex-col items-center justify-center lg:hidden">
+                    <span className="text-[9px] font-black text-gov-blue/40 uppercase tracking-[0.2em] mb-0.5">CivicOS Spatial</span>
+                    <button className="flex items-center gap-1.5 group">
+                        <span className="text-sm font-black text-slate-800 tracking-tight">NATIONAL VIEW</span>
+                        <ChevronDown className="w-3.5 h-3.5 text-gov-blue group-hover:translate-y-0.5 transition-transform" />
+                    </button>
+                </div>
+                
+                {/* Right Side Actions */}
+                <div className="flex items-center gap-2 md:gap-4 flex-1 lg:flex-initial justify-end">
+                    <div className="relative hidden lg:block group">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-gov-blue transition-colors" />
+                        <input 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-11 pr-4 py-2 bg-slate-100/80 border border-slate-200/50 rounded-2xl text-sm w-64 focus:ring-4 focus:ring-gov-blue/5 focus:bg-white transition-all font-bold text-slate-700 placeholder:text-slate-400" 
+                            placeholder="Find ward or issue..." 
+                            type="text"
+                        />
                     </div>
+                    
+                    <button className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 lg:hidden transition-colors">
+                        <Search className="w-5 h-5" />
+                    </button>
+
+                    <div className="relative flex items-center gap-2 lg:pl-4 lg:border-l lg:border-slate-200">
+                        <div className="text-right hidden sm:block mr-1">
+                            <p className="text-[11px] font-black text-slate-800 leading-none">{userProfile?.name || "Citizen"}</p>
+                            <p className="text-[8px] text-slate-400 font-bold mt-1 uppercase tracking-widest leading-none">Resident ID • Active</p>
+                        </div>
+                        <div 
+                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                            className="w-10 h-10 rounded-xl overflow-hidden shadow-2xl ring-2 ring-white cursor-pointer hover:ring-gov-blue/40 transition-all active:scale-95"
+                        >
+                            {userProfile?.profileImageUrl ? (
+                                <img src={userProfile.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 font-bold">{userProfile?.name?.charAt(0) || 'U'}</div>
+                            )}
+                        </div>
+                        {showProfileMenu && (
+                            <div className="absolute top-full right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2.5 z-[200] animate-in fade-in slide-in-from-top-2">
+                                <button className="w-full text-left px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">
+                                    <User className="w-4 h-4 text-gov-blue" /> My Profile
+                                </button>
+                                <button className="w-full text-left px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-3">
+                                    <Bell className="w-4 h-4 text-gov-blue" /> Notifications
+                                </button>
+                                <div className="h-px bg-slate-50 my-2" />
+                                <button onClick={handleLogout} className="w-full text-left px-5 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors flex items-center gap-3">
+                                    <LogoutIcon className="w-4 h-4" /> Logout
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </header>
 
             <div className="flex flex-1 overflow-hidden relative">
-                {/* Mobile Filter Overlay */}
-                {showMobileFilters && (
-                    <div 
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[45] lg:hidden"
-                        onClick={() => setShowMobileFilters(false)}
-                    />
-                )}
+                {/* Desktop Sidebar */}
+                <MapSidebar 
+                    categories={categories}
+                    selectedCategories={selectedCategories}
+                    toggleCategoryAction={toggleCategory}
+                    selectedStatuses={selectedStatuses}
+                    toggleStatusAction={toggleStatus}
+                    onResetAction={() => { setSelectedCategories(categories); setSelectedStatuses(['Pending', 'In Progress', 'Resolved']); }}
+                    onExportAction={handleExportData}
+                    filteredCount={filteredGrievances.length}
+                />
 
-                {/* Sidebar - Stitch Design */}
-                <aside className={`w-80 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:relative lg:translate-x-0 ${showMobileFilters ? 'translate-x-0' : '-translate-x-full'} shadow-2xl lg:shadow-none overflow-y-auto`}>
-                    <div className="p-6 flex items-center justify-between border-b border-slate-50 lg:hidden">
-                        <div className="flex items-center gap-2">
-                            <Filter className="w-5 h-5 text-gov-blue" />
-                            <h2 className="text-lg font-black text-slate-800 tracking-tight">MAP FILTERS</h2>
-                        </div>
-                        <button 
-                            onClick={() => setShowMobileFilters(false)}
-                            className="p-2 hover:bg-slate-50 rounded-xl text-slate-400"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <div className="p-6 space-y-8">
-                        <div>
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-lg font-black flex items-center gap-2 text-slate-800">
-                                    <Filter className="w-5 h-5 text-gov-blue" />
-                                    MAP FILTERS
-                                </h2>
-                                <button 
-                                    onClick={() => { setSelectedCategories([]); setSelectedStatuses([]); }}
-                                    className="text-[10px] text-gov-blue font-black uppercase tracking-widest hover:underline"
-                                >
-                                    Reset
-                                </button>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="space-y-4">
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Issue Categories</h3>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {['Streetlight', 'Garbage', 'Water Leakage', 'Road Damage', 'Encroachment', 'Other'].map(cat => (
-                                            <label key={cat} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-100 group">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={selectedCategories.includes(cat)}
-                                                    onChange={() => toggleCategory(cat)}
-                                                    className="rounded-lg border-slate-300 text-gov-blue focus:ring-gov-blue h-5 w-5 transition-transform group-active:scale-90"
-                                                />
-                                                <span className="text-sm font-bold text-slate-600">{cat}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Status</h3>
-                                    <div className="space-y-2">
-                                        {[
-                                            { id: 'Pending', color: 'bg-red-500' },
-                                            { id: 'In Progress', color: 'bg-amber-500' },
-                                            { id: 'Resolved', color: 'bg-emerald-500' }
-                                        ].map(status => (
-                                            <label key={status.id} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-100 group">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={selectedStatuses.includes(status.id)}
-                                                    onChange={() => toggleStatus(status.id)}
-                                                    className="rounded-lg border-slate-300 text-gov-blue focus:ring-gov-blue h-5 w-5"
-                                                />
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-2 h-2 rounded-full ${status.color}`}></div>
-                                                    <span className="text-sm font-bold text-slate-600">{status.id}</span>
-                                                </div>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-auto p-6 bg-slate-50 border-t border-slate-200">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
-                                <Info className="w-4 h-4" />
-                            </div>
-                            <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-wider">
-                                Showing {filteredGrievances.length} active civic reports.
-                            </p>
-                        </div>
-                        <button 
-                            onClick={handleExportData}
-                            className="w-full py-3 bg-gov-blue text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
-                        >
-                            <Download className="w-4 h-4" />
-                            Export Data
-                        </button>
-                    </div>
-                </aside>
+                {/* Mobile Drawer */}
+                <MobileMapDrawer 
+                    isOpen={showMobileFilters}
+                    onCloseAction={() => setShowMobileFilters(false)}
+                    categories={categories}
+                    selectedCategories={selectedCategories}
+                    toggleCategoryAction={toggleCategory}
+                    selectedStatuses={selectedStatuses}
+                    toggleStatusAction={toggleStatus}
+                    onResetAction={() => { setSelectedCategories(categories); setSelectedStatuses(['Pending', 'In Progress', 'Resolved']); }}
+                />
 
                 {/* Map Area */}
-                <main className="flex-1 relative bg-slate-100 overflow-hidden">
+                <main className="flex-1 relative bg-slate-50 overflow-hidden">
                     <MapComponent 
                         grievances={filteredGrievances} 
                         userLocation={userLocation} 
-                        onTrackTicket={handleTrackTicket}
+                        onTrackTicketAction={handleTrackTicket}
+                        onSelectComplaint={(c) => setSelectedComplaint(c)}
                     />
 
-                    {/* Map Controls - Relocated to Bottom Right */}
-                    <div className="absolute bottom-6 right-6 md:bottom-28 md:right-8 flex flex-col gap-3 z-[1000]">
+                    {/* Detail Card Overlay */}
+                    <MapInfoCard 
+                        complaint={selectedComplaint}
+                        onCloseAction={() => setSelectedComplaint(null)}
+                        onTrackAction={handleTrackTicket}
+                    />
+
+                    {/* Floating Map Controls - Refined Placement */}
+                    <div className="absolute top-6 right-6 flex flex-col gap-3 z-20">
                         <button 
                             onClick={handleMyLocation}
-                            className="p-4 bg-white rounded-2xl shadow-2xl border border-slate-200 hover:bg-slate-50 text-gov-blue transition-all active:scale-95 group flex items-center justify-center"
+                            className="w-12 h-12 bg-gov-blue text-white rounded-2xl shadow-2xl shadow-blue-200 flex items-center justify-center hover:bg-blue-800 transition-all active:scale-95 group ring-4 ring-white"
+                            title="My Location"
                         >
-                            <Navigation className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                            <Target className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         </button>
-                        <div className="flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-                            <button className="p-4 hover:bg-slate-50 border-b border-slate-100 text-slate-600 transition-colors">
-                                <Plus className="w-5 h-5" />
+
+                        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-1 flex flex-col items-center">
+                            <button className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-600 transition-colors">
+                                <Plus className="w-4 h-4" />
                             </button>
-                            <button className="p-4 hover:bg-slate-50 text-slate-600 transition-colors">
-                                <Minus className="w-5 h-5" />
+                            <div className="w-6 h-px bg-slate-100" />
+                            <button className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-600 transition-colors">
+                                <Minus className="w-4 h-4" />
                             </button>
-                        </div>
-                    </div>
-
-                    {/* Coordinates Indicator - Relocated for visual balance */}
-                    <div className="absolute bottom-6 left-6 z-20">
-                        <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
-                             <p className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                {userLocation ? `${userLocation[0].toFixed(3)}° N, ${userLocation[1].toFixed(3)}° E` : 'LOCATING...'}
-                             </p>
-                        </div>
-                    </div>
-
-                    {/* Map Legend */}
-                    <div className="absolute top-6 right-6 z-20 hidden lg:block">
-                        <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl shadow-2xl border border-white w-52 overflow-hidden relative">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gov-blue"></div>
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Live Status Legend</h4>
-                            <div className="space-y-4">
-                                {[
-                                    { label: 'Pending', desc: 'Awaiting Action', color: 'text-red-500' },
-                                    { label: 'In Progress', desc: 'Work Underway', color: 'text-amber-500' },
-                                    { label: 'Resolved', desc: 'Issue Fixed', color: 'text-emerald-500' }
-                                ].map(item => (
-                                    <div key={item.label} className="flex items-center gap-3">
-                                        <MapPin className={`w-5 h-5 ${item.color} fill-current`} />
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-black text-slate-700">{item.label}</span>
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{item.desc}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Coordinates Overlay */}
-                    <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20">
-                        <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-2xl border border-slate-700">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <span className="text-[8px] md:text-[10px] font-black text-white uppercase tracking-widest">
-                                {userLocation 
-                                    ? `${userLocation[0].toFixed(3)}° N, ${userLocation[1].toFixed(3)}° E` 
-                                    : 'Delhi Live'}
-                            </span>
                         </div>
                     </div>
                 </main>
             </div>
             
-            {/* Modals */}
-            {showMyProfileModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden p-8">
-                        <div className="flex justify-between items-start mb-8">
-                            <div className="w-16 h-16 bg-gov-blue/10 rounded-2xl flex items-center justify-center text-gov-blue"><User className="w-8 h-8" /></div>
-                            <button onClick={() => setShowMyProfileModal(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400"><XCircle className="w-6 h-6" /></button>
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800 mb-8">My Profile</h2>
-                        <div className="space-y-4">
-                            <div className="p-4 bg-slate-50 rounded-2xl"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Name</p><p className="text-sm font-bold">{userProfile?.name}</p></div>
-                            <div className="p-4 bg-slate-50 rounded-2xl"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Email</p><p className="text-sm font-bold">{userProfile?.email || "N/A"}</p></div>
-                            <div className="p-4 bg-slate-50 rounded-2xl"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Address</p><p className="text-sm font-bold">{userProfile?.address || "N/A"}</p></div>
-                        </div>
-                        <button onClick={() => { setShowMyProfileModal(false); setProfileFormData({email: userProfile?.email || "", address: userProfile?.address || ""}); setShowUpdateProfileModal(true); }} className="w-full mt-8 py-4 bg-gov-blue text-white rounded-2xl font-black uppercase text-xs">Edit Details</button>
-                    </div>
-                </div>
-            )}
-
-            {showUpdateProfileModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden p-8">
-                        <form onSubmit={handleUpdateProfile}>
-                            <div className="flex justify-between items-start mb-8">
-                                <div className="w-16 h-16 bg-gov-blue/10 rounded-2xl flex items-center justify-center text-gov-blue"><Settings className="w-8 h-8" /></div>
-                                <button type="button" onClick={() => setShowUpdateProfileModal(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400"><XCircle className="w-6 h-6" /></button>
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-800 mb-8">Update Profile</h2>
-                            <div className="space-y-4">
-                                <input type="email" placeholder="Email" className="w-full p-4 bg-slate-50 rounded-2xl outline-none" value={profileFormData.email} onChange={e => setProfileFormData({...profileFormData, email: e.target.value})} />
-                                <textarea placeholder="Address" rows={3} className="w-full p-4 bg-slate-50 rounded-2xl outline-none" value={profileFormData.address} onChange={e => setProfileFormData({...profileFormData, address: e.target.value})} />
-                            </div>
-                            <button type="submit" disabled={isUpdatingProfile} className="w-full mt-8 py-4 bg-gov-blue text-white rounded-2xl font-black uppercase text-xs">{isUpdatingProfile ? "Saving..." : "Save Profile"}</button>
-                        </form>
-                    </div>
-                </div>
-            )}
-
             <style jsx global>{`
                 .leaflet-container {
-                    background: #f1f5f9 !important;
+                    background: #f8fafc !important;
                 }
                 .premium-popup .leaflet-popup-content-wrapper {
-                    border-radius: 20px !important;
+                    border-radius: 28px !important;
                     padding: 0 !important;
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-                    border: 1px solid rgba(255,255,255,0.5);
+                    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.4) !important;
+                    border: 1px solid rgba(255,255,255,0.6);
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(20px);
                 }
                 .premium-popup .leaflet-popup-content {
                     margin: 0 !important;
                     padding: 0 !important;
                 }
                 .premium-popup .leaflet-popup-tip {
+                    background: rgba(255, 255, 255, 0.95);
                     box-shadow: none !important;
+                    border: 1px solid rgba(255,255,255,0.6);
+                }
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
                 }
             `}</style>
         </div>
     );
+}
+
+// Simple LogOut icon replacement since it was missing in original imports but I used it
+function LogOut(props: any) {
+  return (
+    <svg 
+      {...props} 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
 }

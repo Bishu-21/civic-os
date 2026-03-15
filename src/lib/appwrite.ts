@@ -49,4 +49,9 @@ export const GRIEVANCES_COLLECTION_ID = process.env.APPWRITE_GRIEVANCES_COLLECTI
 export const PROFILE_IMAGES_BUCKET_ID = process.env.APPWRITE_PROFILE_IMAGES_BUCKET_ID || '';
 export const GRIEVANCE_IMAGES_BUCKET_ID = process.env.APPWRITE_GRIEVANCE_IMAGES_BUCKET_ID || '';
 
+if (typeof window === 'undefined') {
+    if (!PROJECT_ID) console.warn('[APPWRITE_CONFIG] Missing APPWRITE_PROJECT_ID');
+    if (!DATABASE_ID) console.warn('[APPWRITE_CONFIG] Missing APPWRITE_DATABASE_ID');
+}
+
 export { ID };
