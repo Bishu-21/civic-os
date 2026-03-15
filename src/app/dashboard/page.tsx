@@ -60,6 +60,7 @@ export default function CitizenDashboard() {
     const [searchTerm, setSearchTerm] = useState("");
     const [activeZone, setActiveZone] = useState("All India");
     const [aiInsight, setAiInsight] = useState<any>(null);
+    const [showMandatoryUpdateModal, setShowMandatoryUpdateModal] = useState(false);
 
     // Menu States
     const [showZoneMenu, setShowZoneMenu] = useState(false);
@@ -221,8 +222,24 @@ export default function CitizenDashboard() {
                     }
                 }
 
-                // SUCCESS: We have a profile (either from server or client recovery)
-                if (finalProfile && finalProfile.name && !finalProfile.name.includes('Bridge')) {
+                // Check if user has missing mandatory details
+                const checkGlitchUser = (profile: any) => {
+                    if (!profile) return false;
+                    return !profile.name || profile.name.includes('Bridge') || profile.name.trim() === '' || 
+                           !profile.govIdNumber || profile.govIdNumber.includes('*');
+                };
+
+                const isGlitch = checkGlitchUser(finalProfile);
+
+                if (isGlitch && finalProfile) {
+                    console.log(`[DASHBOARD_CLIENT] User missing mandatory details. Showing modal.`);
+                    setUserProfile(finalProfile);
+                    setShowMandatoryUpdateModal(true);
+                    setIsLoading(false);
+                    clearTimeout(safetyTimeout);
+                }
+                // SUCCESS: We have a complete profile
+                else if (finalProfile && !isGlitch) {
                     console.log(`[DASHBOARD_CLIENT] Final Full Profile Resolved:`, finalProfile.userId);
                     setUserProfile(finalProfile);
                     
@@ -241,10 +258,10 @@ export default function CitizenDashboard() {
                         });
                     }
                 } 
-                // REDIRECT: Session exists but profile is missing
-                else if (result.success && (!finalProfile || finalProfile.name.includes('Bridge'))) {
-                    console.log(`[DASHBOARD_CLIENT] Profile missing. Redirecting to register.`);
-                    setIsLoading(false); // Stop spinner before redirect
+                // REDIRECT: Session exists but profile is completely missing (not even glitch data)
+                else if (result.success && !finalProfile) {
+                    console.log(`[DASHBOARD_CLIENT] Profile completely missing. Redirecting to register.`);
+                    setIsLoading(false);
                     clearTimeout(safetyTimeout);
                     router.replace('/auth/register');
                 }
@@ -390,16 +407,16 @@ export default function CitizenDashboard() {
             {/* Main Content */}
             <main className="flex-1 lg:ml-64 p-4 md:p-8">
                 {/* Header Section */}
-                <header className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8 bg-white/50 backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-3xl border border-white/50 shadow-sm sticky top-4 z-10">
+                <header className="flex items-center gap-2 md:gap-4 mb-6 md:mb-8 bg-white/50 backdrop-blur-md p-2 md:p-4 rounded-2xl md:rounded-3xl border border-white/50 shadow-sm sticky top-0 md:top-4 z-10 transition-all">
                     <button 
                         onClick={() => setShowMobileSidebar(true)}
-                        className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 lg:hidden"
+                        className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 lg:hidden flex-shrink-0"
                     >
                         <Menu className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
 
-                    <div className="flex items-center gap-2 md:gap-4 flex-1 overflow-hidden">
-                        <div className="relative flex-1 hidden md:block">
+                    <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+                        <div className="relative flex-1 hidden xl:block">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input 
                                 type="text" 
@@ -443,12 +460,12 @@ export default function CitizenDashboard() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3 md:gap-6 flex-shrink-0">
                         <button 
                             onClick={handleVoiceAssist}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${isRecording || isSpeaking ? 'bg-gov-blue/5 border-gov-blue/20 text-gov-blue animate-pulse' : 'bg-white border-slate-100 text-gov-blue hover:bg-slate-50'}`}
+                            className={`flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 rounded-xl border transition-all ${isRecording || isSpeaking ? 'bg-gov-blue/5 border-gov-blue/20 text-gov-blue animate-pulse' : 'bg-white border-slate-100 text-gov-blue hover:bg-slate-50'}`}
                         >
-                            {isRecording || isSpeaking ? <Mic className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            {isRecording || isSpeaking ? <Mic className="w-4 h-4 sm:w-5 sm:h-5" /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />}
                             <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">{isRecording ? "Listening..." : isSpeaking ? "Speaking..." : "Voice Assist"}</span>
                         </button>
 
@@ -480,10 +497,10 @@ export default function CitizenDashboard() {
                             )}
                         </div>
 
-                        <div className="relative flex items-center gap-3 pl-4 border-l border-slate-200">
+                        <div className="relative flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l border-slate-200">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-black text-slate-800 leading-none">{userProfile?.name || "Citizen"}</p>
-                                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest leading-none">Resident • {activeZone}</p>
+                                <p className="text-sm font-black text-slate-800 leading-none whitespace-nowrap truncate max-w-[120px]">{userProfile?.name || "Citizen"}</p>
+                                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest leading-none truncate max-w-[120px]">Resident • {activeZone}</p>
                             </div>
                             <div className="relative">
                                 <div 
@@ -539,7 +556,7 @@ export default function CitizenDashboard() {
 
                 <div className="space-y-8">
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                         <MISStatCard 
                             title="Active Reports" 
                             value={stats.pendingReports + stats.inProgressReports} 
@@ -575,7 +592,7 @@ export default function CitizenDashboard() {
                     </div>
 
                     {/* AI Alert Card matches design */}
-                    <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in zoom-in-95 duration-500">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in zoom-in-95 duration-500">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-blue-100 rounded-xl flex-shrink-0 flex items-center justify-center text-gov-blue shadow-inner">
                                 <Sparkles className="w-6 h-6" />
@@ -622,7 +639,54 @@ export default function CitizenDashboard() {
                         </div>
 
                         <div className="overflow-x-auto -mx-4 md:mx-0">
-                            <table className="w-full text-left min-w-[700px]">
+                            {/* Mobile Card View */}
+                            <div className="block md:hidden border-t border-slate-50 mt-4">
+                                {complaints.length > 0 ? complaints.map((item) => (
+                                    <div key={item.id} className="p-4 border-b border-slate-50 flex items-start justify-between hover:bg-slate-50 transition-colors">
+                                        <div className="flex items-start gap-3">
+                                            <button 
+                                                onClick={() => handleGrievanceVoice(item)}
+                                                className="w-10 h-10 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center text-blue-500 hover:bg-blue-100 transition-colors"
+                                            >
+                                                <Volume2 className="w-5 h-5" />
+                                            </button>
+                                            <div>
+                                                <h3 className="text-sm font-bold text-slate-800 mb-0.5">{item.category}</h3>
+                                                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500">
+                                                    <span>#{item.id}</span>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                                                    <span className="truncate max-w-[100px]">{item.ward}</span>
+                                                </div>
+                                                <div className="mt-2 text-[10px] font-bold text-slate-600">
+                                                    Assigned to: {item.assignedTo || "Review"}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                                                item.status === 'Resolved' ? 'bg-green-100 text-green-700' : 
+                                                item.status === 'In Progress' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                                            }`}>
+                                                {item.status}
+                                            </span>
+                                            <button 
+                                                onClick={() => generateGrievancePDF(item)}
+                                                className="p-1.5 hover:bg-gov-blue/5 rounded-lg text-slate-400 hover:text-gov-blue transition-colors"
+                                            >
+                                                <FileDown className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-8 text-center text-slate-400">
+                                        <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-xs font-bold">No reports submitted yet.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <table className="hidden md:table w-full text-left min-w-[700px]">
                                 <thead>
                                     <tr className="border-b border-slate-50">
                                         <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ticket ID</th>
@@ -861,4 +925,132 @@ function MISStatCard({ title, value, trend, trendUp, icon, subtitle }: any) {
             </div>
         </div>
     )
+}
+
+function MandatoryProfileUpdateModal({ userProfile, onComplete }: { userProfile: UserProfile, onComplete: (profile: UserProfile) => void }) {
+    const [name, setName] = useState(userProfile.name?.includes('Bridge') ? '' : userProfile.name || '');
+    const [govIdType, setGovIdType] = useState(userProfile.govIdType?.includes('Verified') ? 'Aadhaar' : userProfile.govIdType || 'Aadhaar');
+    const [govIdNumber, setGovIdNumber] = useState(userProfile.govIdNumber?.includes('*') ? '' : userProfile.govIdNumber || '');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        if (!name || !govIdNumber) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const { isFullProfile } = await getServerProfileAction();
+            let result;
+            
+            if (isFullProfile) {
+                result = await updateUserProfileAction({
+                    userId: userProfile.userId,
+                    name,
+                    govIdType,
+                    govIdNumber
+                });
+            } else {
+                const formData = new FormData();
+                formData.append('userId', userProfile.userId);
+                formData.append('name', name);
+                formData.append('govIdType', govIdType);
+                formData.append('govIdNumber', govIdNumber);
+                const { createProfileWithImageAction } = await import('@/app/actions/profile');
+                result = await createProfileWithImageAction(formData);
+            }
+            
+            if (result.success) {
+                // Also trigger a background sync of their grievances so any generic records now get associated with this new name if needed
+                try {
+                    const { syncGrievanceUserDetailsAction } = await import('@/app/actions/grievance');
+                    await syncGrievanceUserDetailsAction(userProfile.userId, name);
+                } catch (syncErr) {
+                    console.error("Failed to sync grievances", syncErr);
+                }
+
+                onComplete({ ...userProfile, name, govIdType, govIdNumber });
+            } else {
+                setError(result.error || 'Failed to save profile.');
+            }
+        } catch (err: any) {
+            setError('An unexpected error occurred. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 fixed inset-0 z-[100]">
+            <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 md:p-10 animate-in fade-in slide-in-from-bottom-4">
+                <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mx-auto mb-4 border border-red-100 shadow-inner">
+                        <ShieldAlert className="w-8 h-8" />
+                    </div>
+                    <h1 className="text-xl font-black text-slate-900 mb-2">Mandatory Profile Update</h1>
+                    <p className="text-red-500 text-[11px] font-bold px-4 py-2 bg-red-50 rounded-lg inline-block border border-red-100 shadow-sm leading-relaxed">
+                        Your account is missing required registration details. Complete now to avoid service interruption.
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 text-sm">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <span className="font-medium">{error}</span>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Full Name (As per Govt ID)</label>
+                        <input 
+                            type="text" 
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Enter your full name"
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-800 placeholder:text-slate-300 focus:bg-white focus:border-gov-blue outline-none transition-all"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">ID Type</label>
+                            <select 
+                                value={govIdType}
+                                onChange={(e) => setGovIdType(e.target.value)}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-800 focus:bg-white focus:border-gov-blue outline-none transition-all"
+                            >
+                                <option>Aadhaar</option>
+                                <option>PAN Card</option>
+                                <option>Voter ID</option>
+                                <option>Driving License</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">ID Number</label>
+                            <input 
+                                type="text" 
+                                value={govIdNumber}
+                                onChange={(e) => setGovIdNumber(e.target.value)}
+                                placeholder="Enter ID number"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-800 placeholder:text-slate-300 focus:bg-white focus:border-gov-blue outline-none transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full mt-6 py-4 bg-gov-blue text-white text-sm font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-gov-blue/20 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Profile Details"}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
 }
