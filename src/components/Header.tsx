@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { User, Search, PlayCircle, LayoutGrid, LogOut } from "lucide-react";
+import { User, Search, PlayCircle, LayoutGrid, LogOut, Menu, X } from "lucide-react";
 import { generateDemoData } from "@/lib/store";
 import { getCurrentUserAction, logoutAction } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ export default function Header() {
     const router = useRouter();
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         const checkSession = async () => {
@@ -98,13 +99,41 @@ export default function Header() {
                             <div className="hidden md:flex gap-6">
                                 <Link href="/auth" className="text-slate-600 font-bold hover:text-primary transition-colors">Login</Link>
                             </div>
-                            <Link href="/auth" className="px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 shadow-md shadow-primary/20 transition-all">
+                            <Link href="/auth" className="px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 shadow-md shadow-primary/20 transition-all hidden sm:block">
                                 Register
                             </Link>
                         </>
                     )}
+
+                    {/* Mobile Menu Toggle */}
+                    <button 
+                        className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    >
+                        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
                 </div>
             </div>
+
+            {/* Mobile Navigation Menu */}
+            {isMobileMenuOpen && (
+                <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-slate-200 shadow-xl py-4 px-4 flex flex-col gap-4 animate-in slide-in-from-top-2">
+                    <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-semibold text-gov-blue hover:bg-slate-50 rounded-lg transition-colors">Home</Link>
+                    {isLoggedIn && (
+                        <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Dashboard</Link>
+                    )}
+                    <Link href="/services" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Services</Link>
+                    <Link href="/map" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Spatial Map</Link>
+                    <Link href="/help" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Help</Link>
+                    
+                    {!isLoggedIn && (
+                        <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
+                            <Link href="/auth" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-center text-gov-blue hover:bg-slate-50 rounded-lg transition-colors">Login</Link>
+                            <Link href="/auth" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-center text-white bg-primary rounded-lg shadow-md">Register</Link>
+                        </div>
+                    )}
+                </div>
+            )}
         </header>
     );
 }

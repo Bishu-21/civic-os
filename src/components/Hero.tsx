@@ -134,15 +134,15 @@ export default function Hero() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between">
-                                    <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
+                                    <div className="flex flex-wrap gap-2">
                                         <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-full">NLP Analysis</span>
                                         <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-full">Priority Engine</span>
                                     </div>
                                     <button 
                                         onClick={handleAnalyze}
                                         disabled={isAnalyzing || !description.trim()}
-                                        className="flex items-center gap-2 px-6 py-3 bg-gov-blue text-white font-bold rounded-lg hover:brightness-110 shadow-md transition-all disabled:opacity-50"
+                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gov-blue text-white font-bold rounded-lg hover:brightness-110 shadow-md transition-all disabled:opacity-50 shrink-0"
                                     >
                                         {isAnalyzing ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
