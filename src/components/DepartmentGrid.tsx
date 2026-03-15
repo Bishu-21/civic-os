@@ -38,7 +38,7 @@ export default function DepartmentGrid() {
     };
 
     return (
-        <section className="py-20 bg-background-light">
+        <section id="services" className="py-20 bg-background-light">
             <div className="container mx-auto px-4 md:px-10 lg:px-20">
                 <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
                     <div>

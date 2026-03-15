@@ -3,16 +3,18 @@ import { Phone, Mail, Instagram, Twitter, Facebook, ExternalLink } from "lucide-
 
 export default function Footer() {
     return (
-        <footer className="bg-gov-blue text-white py-12">
+        <footer id="footer" className="bg-gov-blue text-white py-12">
             <div className="container mx-auto px-4 md:px-10 lg:px-20">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 text-center md:text-left">
                     <div className="md:col-span-2">
                         <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
-                            <img 
-                                alt="MCD CivicOS Logo" 
-                                className="h-10 brightness-0 invert" 
-                                src="/logo1.png" 
-                            />
+                                <div className="w-10 h-10 bg-white flex items-center justify-center">
+                                    <img 
+                                        alt="MCD CivicOS Logo" 
+                                        className="w-8 h-8 object-contain" 
+                                        src="/logo1.png" 
+                                    />
+                                </div>
                             <span className="text-xl font-extrabold tracking-tight">CivicOS National</span>
                         </div>
                         <p className="text-slate-300 max-w-sm mb-6 mx-auto md:mx-0">

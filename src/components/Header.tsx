@@ -67,13 +67,15 @@ export default function Header() {
 
                 {/* Navigation Links */}
                 <nav className="hidden lg:flex items-center gap-8">
-                    <Link href="/" className="text-sm font-semibold text-gov-blue hover:text-primary transition-colors">Home</Link>
+                    <Link href="/dashboard" className="text-sm font-semibold text-gov-blue hover:text-primary transition-colors">Home</Link>
                     {isLoggedIn && (
-                        <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Dashboard</Link>
+                        <>
+                            <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Dashboard</Link>
+                            <Link href="/map" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Spatial Map</Link>
+                        </>
                     )}
-                    <Link href="/services" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Services</Link>
-                    <Link href="/map" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Spatial Map</Link>
-                    <Link href="/help" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Help</Link>
+                    <a href="#services" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors cursor-pointer">Services</a>
+                    <a href="#footer" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors cursor-pointer">Help</a>
                 </nav>
 
                 {/* Auth Buttons */}
@@ -118,13 +120,15 @@ export default function Header() {
             {/* Mobile Navigation Menu */}
             {isMobileMenuOpen && (
                 <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-slate-200 shadow-xl py-4 px-4 flex flex-col gap-4 animate-in slide-in-from-top-2">
-                    <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-semibold text-gov-blue hover:bg-slate-50 rounded-lg transition-colors">Home</Link>
+                    <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-semibold text-gov-blue hover:bg-slate-50 rounded-lg transition-colors">Home</Link>
                     {isLoggedIn && (
-                        <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Dashboard</Link>
+                        <>
+                            <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Dashboard</Link>
+                            <Link href="/map" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Spatial Map</Link>
+                        </>
                     )}
-                    <Link href="/services" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Services</Link>
-                    <Link href="/map" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Spatial Map</Link>
-                    <Link href="/help" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Help</Link>
+                    <a href="#services" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors block">Services</a>
+                    <a href="#footer" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors block">Help</a>
                     
                     {!isLoggedIn && (
                         <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
