@@ -3,6 +3,7 @@
 import { createAppwriteClient, getServerSession, ID } from '@/lib/appwrite.server';
 import { cookies } from 'next/headers';
 import { env } from '@/lib/env';
+import { Query } from 'appwrite';
 
 /**
  * Send OTP to mobile
@@ -130,26 +131,22 @@ export async function checkRegistrationAction(providedSecret?: string) {
         // Check if user has a profile in the profiles table using TablesDB
         let isNewUser = true;
         try {
-            // Using rowId: user.$id for direct Document lookup (most reliable)
-            // Using documentId: user.$id for direct Document lookup
-            const profile = await databases.getDocument(
+            // Because legacy profile rows have arbitrary generated document IDs instead of matching user.$id,
+            // we query by the 'userId' column to guarantee a correct lookup.
+            const profileList = await databases.listDocuments(
                 env.DATABASE_ID,
                 env.PROFILES_COLLECTION_ID,
-                user.$id
+                [Query.equal('userId', user.$id), Query.limit(1)]
             );
             
-            if (profile && profile.$id) {
+            if (profileList.documents.length > 0) {
                 console.log(`[AUTH_ACTION_DEBUG] Profile document found for user ${user.$id}. Not a new user.`);
                 isNewUser = false;
+            } else {
+                console.log(`[AUTH_ACTION_DEBUG] No profile document found (404/Empty). Classifying as NEW USER.`);
             }
         } catch (e: any) {
-            // Log if it's NOT a 404 (404 is expected for new users)
-            if (e.code !== 404) {
-                console.error(`[AUTH_ACTION_DEBUG] DB error during profile check:`, e.message);
-            } else {
-                console.log(`[AUTH_ACTION_DEBUG] No profile document found (404). Classifying as NEW USER.`);
-            }
-            isNewUser = true;
+            console.log(`[AUTH_ACTION_DEBUG] Profile check failed/missing for ${user.$id}: ${e.message}`);
         }
 
         return JSON.parse(JSON.stringify({ 

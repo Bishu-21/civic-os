@@ -4,6 +4,7 @@ import { DATABASE_ID, PROFILES_COLLECTION_ID, PROFILE_IMAGES_BUCKET_ID, createAp
 import { Query, ID } from 'appwrite';
 import { cookies } from 'next/headers';
 import { env } from '@/lib/env';
+import { InputFile } from 'node-appwrite/file';
 
 export interface UserProfile {
     userId: string;
@@ -30,24 +31,36 @@ export async function getServerProfileAction() {
         }
 
         // Real Session Fetch
-        const { account, tablesDB } = createAppwriteClient(sessionSecret);
+        const { account, tablesDB, databases } = createAppwriteClient(sessionSecret);
         const user = await account.get();
         console.log(`[PROFILE_SERVER_V5] Authenticated User: ${user.name} (${user.$id})`);
         
         try {
-            const doc = await tablesDB.getRow({
-                databaseId: DATABASE_ID,
-                tableId: PROFILES_COLLECTION_ID,
-                rowId: user.$id
-            });
+            // Because legacy rows may have arbitrary Document IDs, query strictly by `userId` column
+            const profileList = await databases.listDocuments(
+                DATABASE_ID,
+                PROFILES_COLLECTION_ID,
+                [Query.equal('userId', user.$id), Query.limit(1)]
+            );
+            
+            if (profileList.documents.length === 0) {
+                console.log(`[PROFILE_SERVER_V7] No legacy or modern profile rows found for user ${user.$id}.`);
+                return JSON.parse(JSON.stringify({ 
+                    success: true, 
+                    isFullProfile: false, 
+                    userId: user.$id 
+                }));
+            }
+
+            const doc = profileList.documents[0];
             
             const profile: UserProfile = {
                 userId: doc.userId,
-                name: doc.name || '',
-                govIdType: doc.govIdType || '',
+                name: doc.name || user.name,
+                govIdType: doc.govIdType || 'Aadhaar',
                 govIdNumber: doc.govIdNumber || '',
                 profileImageUrl: doc.profileImageUrl || '',
-                email: doc.email || '',
+                email: user.email,
                 address: doc.address || ''
             };
             return JSON.parse(JSON.stringify({ 
@@ -118,10 +131,14 @@ export async function createProfileWithImageAction(formData: FormData) {
 
         let profileImageUrl = '';
         if (imageFile && imageFile.size > 0) {
+            // Convert Web File to ArrayBuffer, then Buffer, then InputFile
+            const buffer = Buffer.from(await imageFile.arrayBuffer());
+            const inputFile = InputFile.fromBuffer(buffer, imageFile.name || 'profile.jpg');
+
             const upload = await storage.createFile({
                 bucketId: PROFILE_IMAGES_BUCKET_ID,
                 fileId: ID.unique(),
-                file: imageFile
+                file: inputFile
             });
             const endpoint = env.APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1';
             const projectId = env.APPWRITE_PROJECT_ID || '';

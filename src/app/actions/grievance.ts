@@ -2,6 +2,7 @@
 
 import { createAppwriteClient, DATABASE_ID, GRIEVANCES_COLLECTION_ID, GRIEVANCE_IMAGES_BUCKET_ID, ID, getServerSession } from '@/lib/appwrite';
 import { Complaint } from '@/lib/types';
+import { InputFile } from 'node-appwrite/file';
 
 /**
  * Upload an image for a grievance
@@ -16,10 +17,14 @@ export async function uploadGrievanceImageAction(formData: FormData) {
         
         if (!file) return { success: false, error: 'NO_FILE' };
 
+        // Convert Web File to ArrayBuffer, then Buffer, then InputFile
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const inputFile = InputFile.fromBuffer(buffer, file.name || 'image.jpg');
+
         const result = await storage.createFile({
             bucketId: GRIEVANCE_IMAGES_BUCKET_ID,
             fileId: ID.unique(),
-            file: file
+            file: inputFile
         });
 
         return { success: true, fileId: result.$id };
