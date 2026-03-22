@@ -1,7 +1,8 @@
 "use server";
 
-import { createAppwriteClient, DATABASE_ID, GRIEVANCES_COLLECTION_ID, GRIEVANCE_IMAGES_BUCKET_ID, ID, getServerSession } from '@/lib/appwrite';
+import { createAppwriteClient, DATABASE_ID, GRIEVANCES_COLLECTION_ID, GRIEVANCE_IMAGES_BUCKET_ID, ID, getServerSession } from '@/lib/appwrite.server';
 import { Complaint } from '@/lib/types';
+import { Permission, Role } from 'node-appwrite';
 import { InputFile } from 'node-appwrite/file';
 import { Schemas, sanitizeString } from "@/lib/security";
 import { standardLimiter, getClientIp } from "@/lib/ratelimit";
@@ -97,7 +98,12 @@ export async function createGrievanceAction(data: Partial<Complaint>) {
                 userId: userId,               // Force current logged-in user ID
                 status: attributes.status || 'Pending', // Default status
                 createdAt: attributes.createdAt || new Date().toISOString()
-            }
+            },
+            permissions: [
+                Permission.read(Role.any()), // Public on map
+                Permission.update(Role.user(userId)), // Only creator can edit
+                Permission.delete(Role.user(userId)), // Only creator can delete
+            ]
         });
 
         console.log(`[GRIEVANCE_ACTION] Success! Doc ID: ${result.$id}`);
@@ -140,7 +146,7 @@ export async function getGrievancesAction() {
         });
 
         // Filter by the current user's ID manually
-        const userGrievances = response.rows.filter(row => row.userId === user.$id);
+        const userGrievances = response.documents.filter((row: any) => row.userId === user.$id);
 
         // ALWAYS sanitize for Next.js 16 serialization (Plain Objects only)
         return JSON.parse(JSON.stringify({ success: true, grievances: userGrievances }));
@@ -167,7 +173,7 @@ export async function getAllGrievancesAction() {
         });
 
         // ALWAYS sanitize for Next.js 16 serialization (Plain Objects only)
-        return JSON.parse(JSON.stringify({ success: true, grievances: response.rows }));
+        return JSON.parse(JSON.stringify({ success: true, grievances: response.documents }));
     } catch (error: any) {
         console.error("Fetch All Grievances Error:", error);
         return { success: false, error: error.message };
@@ -191,7 +197,7 @@ export async function syncGrievanceUserDetailsAction(userId: string, newName: st
             queries: [Query.limit(500)] // High limit for sync operations
         });
 
-        const userRows = response.rows.filter(row => row.userId === userId);
+        const userRows = response.documents.filter((row: any) => row.userId === userId);
         console.log(`[SYNC_GRIEVANCES] Found ${userRows.length} grievances for ${userId} to sync with name: ${newName}`);
 
         return { success: true, syncedCount: userRows.length };
@@ -202,7 +208,7 @@ export async function syncGrievanceUserDetailsAction(userId: string, newName: st
         // If they rely on joins, we don't need to update.
         // Looking at the dashboard, name isn't directly on the grievance.
         
-        return { success: true, syncedCount: response.rows.length };
+        return { success: true, syncedCount: response.documents.length };
     } catch (error: any) {
         console.error("Sync Grievances Error:", error);
         return { success: false, error: error.message };

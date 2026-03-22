@@ -1,7 +1,7 @@
 'use server';
 
 import { DATABASE_ID, PROFILES_COLLECTION_ID, PROFILE_IMAGES_BUCKET_ID, createAppwriteClient, getServerSession } from '@/lib/appwrite.server';
-import { Query, ID } from 'appwrite';
+import { Query, ID, Permission, Role } from 'node-appwrite';
 import { cookies } from 'next/headers';
 import { env } from '@/lib/env';
 import { InputFile } from 'node-appwrite/file';
@@ -185,7 +185,12 @@ export async function createProfileWithImageAction(formData: FormData) {
             databaseId: DATABASE_ID,
             tableId: PROFILES_COLLECTION_ID,
             rowId: userId, // Use userId as rowId for direct access in checkRegistrationAction
-            data: profile
+            data: profile,
+            permissions: [
+                Permission.read(Role.user(userId)),
+                Permission.update(Role.user(userId)),
+                Permission.delete(Role.user(userId)),
+            ]
         });
 
         return JSON.parse(JSON.stringify({ success: true, data: result }));

@@ -3,7 +3,7 @@
 import { createAppwriteClient, getServerSession, ID } from '@/lib/appwrite.server';
 import { cookies } from 'next/headers';
 import { env } from '@/lib/env';
-import { Query } from 'appwrite';
+import { Query } from 'node-appwrite';
 import { Schemas, sanitizeString } from "@/lib/security";
 import { strictLimiter, getClientIp } from "@/lib/ratelimit";
 
@@ -166,11 +166,11 @@ export async function checkRegistrationAction(providedSecret?: string) {
         try {
             // Because legacy profile rows have arbitrary generated document IDs instead of matching user.$id,
             // we query by the 'userId' column to guarantee a correct lookup.
-            const profileList = await databases.listDocuments(
-                env.DATABASE_ID,
-                env.PROFILES_COLLECTION_ID,
-                [Query.equal('userId', user.$id), Query.limit(1)]
-            );
+            const profileList = await databases.listDocuments({
+                databaseId: env.DATABASE_ID,
+                collectionId: env.PROFILES_COLLECTION_ID,
+                queries: [Query.equal('userId', user.$id), Query.limit(1)]
+            });
             
             if (profileList.documents.length > 0) {
                 console.log(`[AUTH_ACTION_DEBUG] Profile document found for user ${user.$id}. Not a new user.`);

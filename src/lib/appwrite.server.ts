@@ -48,19 +48,43 @@ export function createAppwriteClient(sessionSecret?: string) {
 
     const tablesDB = {
         getRow: async (params: { databaseId: string, tableId: string, rowId: string }) => {
-            return await databases.getDocument(params.databaseId, params.tableId, params.rowId);
+            return await databases.getDocument({
+                databaseId: params.databaseId,
+                collectionId: params.tableId,
+                documentId: params.rowId
+            });
         },
-        createRow: async (params: { databaseId: string, tableId: string, rowId?: string, data: any }) => {
-            return await databases.createDocument(params.databaseId, params.tableId, params.rowId || ID.unique(), params.data);
+        createRow: async (params: { databaseId: string, tableId: string, rowId?: string, data: any, permissions?: string[] }) => {
+            return await databases.createDocument({
+                databaseId: params.databaseId,
+                collectionId: params.tableId,
+                documentId: params.rowId || ID.unique(),
+                data: params.data,
+                permissions: params.permissions
+            });
         },
-        updateRow: async (params: { databaseId: string, tableId: string, rowId: string, data: any }) => {
-            return await databases.updateDocument(params.databaseId, params.tableId, params.rowId, params.data);
+        updateRow: async (params: { databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[] }) => {
+            return await databases.updateDocument({
+                databaseId: params.databaseId,
+                collectionId: params.tableId,
+                documentId: params.rowId,
+                data: params.data,
+                permissions: params.permissions
+            });
         },
         deleteRow: async (params: { databaseId: string, tableId: string, rowId: string }) => {
-            return await databases.deleteDocument(params.databaseId, params.tableId, params.rowId);
+            return await databases.deleteDocument({
+                databaseId: params.databaseId,
+                collectionId: params.tableId,
+                documentId: params.rowId
+            });
         },
         listRows: async (params: { databaseId: string, tableId: string, queries?: string[] }) => {
-            return await databases.listDocuments(params.databaseId, params.tableId, params.queries);
+            return await databases.listDocuments({
+                databaseId: params.databaseId,
+                collectionId: params.tableId,
+                queries: params.queries
+            });
         }
     };
 
