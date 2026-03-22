@@ -1,6 +1,6 @@
 "use server";
 
-import { analyzeIssue } from "@/lib/gemini";
+import { analyzeIssue, generateVoiceSummary } from "@/lib/gemini";
 import { transcribeAudio, textToSpeech } from "@/lib/sarvam";
 
 /**
@@ -24,5 +24,13 @@ export async function transcribeAudioAction(base64Audio: string) {
  */
 export async function textToSpeechAction(text: string, speaker: string = "shubh", languageCode: string = "hi-IN") {
     const result = await textToSpeech(text, speaker, languageCode);
+    return JSON.parse(JSON.stringify(result));
+}
+
+/**
+ * Server Action to generate dynamic Voice Assistant summary using Gemini
+ */
+export async function generateDynamicVoiceSummaryAction(complaints: any[], userName: string) {
+    const result = await generateVoiceSummary(complaints, userName);
     return JSON.parse(JSON.stringify(result));
 }

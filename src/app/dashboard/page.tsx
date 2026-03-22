@@ -40,7 +40,7 @@ import { getServerProfileAction, UserProfile, updateUserProfileAction } from "@/
 import { reverseGeocodeAction } from "@/app/actions/geo";
 import { getComplaints, updateComplaint, getStats, syncGrievances } from "@/lib/store";
 import { Complaint } from "@/lib/types";
-import { analyzeIssueAction, transcribeAudioAction, textToSpeechAction } from "@/app/actions/ai";
+import { analyzeIssueAction, transcribeAudioAction, textToSpeechAction, generateDynamicVoiceSummaryAction } from "@/app/actions/ai";
 import { getGrievancesAction, createGrievanceAction } from "@/app/actions/grievance";
 import { generateGrievancePDF } from "@/lib/pdf";
 
@@ -91,10 +91,9 @@ export default function CitizenDashboard() {
     const handleVoiceAssist = async () => {
         if (isSpeaking) return;
         setIsRecording(true);
-        // Correct interpolation for user profile name
-        const summaryText = `नमस्ते ${userProfile?.name || 'citizen'}. आपके पास ${stats.pendingReports} लंबित शिकायतें हैं। आपकी कचरा संग्रहण की शिकायत पर कार्रवाई की जा रही है।`;
         
         try {
+            const summaryText = await generateDynamicVoiceSummaryAction(complaints, userProfile?.name || 'citizen');
             const audios = await textToSpeechAction(summaryText, "shubh", "hi-IN");
             if (audios && audios.length > 0) {
                 playAudio(audios[0]);
@@ -535,14 +534,26 @@ export default function CitizenDashboard() {
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Notifications</p>
                                     </div>
                                     <div className="max-h-64 overflow-y-auto">
-                                        <div className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                            <p className="text-xs font-bold text-slate-800">Garbage Collection Alert</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Your area (Ward 88) has a scheduled cleanup at 10:00 AM tomorrow.</p>
-                                        </div>
-                                        <div className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                            <p className="text-xs font-bold text-slate-800">Status Update: #CIV-878564</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Your complaint has been assigned to a Field Officer.</p>
-                                        </div>
+                                        {aiInsight?.active && (
+                                            <div className="p-4 border-b border-slate-50 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer">
+                                                <p className="text-xs font-bold text-red-600">Community Alert</p>
+                                                <p className="text-[10px] text-red-500 mt-1">{aiInsight.message}</p>
+                                            </div>
+                                        )}
+                                        {complaints.length === 0 && !aiInsight?.active ? (
+                                            <div className="p-4 border-b border-slate-50">
+                                                <p className="text-xs font-bold text-slate-500">No active notifications</p>
+                                            </div>
+                                        ) : (
+                                            complaints.slice(0, 5).map(c => (
+                                                <div key={c.id} className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer">
+                                                    <p className="text-xs font-bold text-slate-800">Status Update: {c.id}</p>
+                                                    <p className="text-[10px] text-slate-500 mt-1">
+                                                        Your {c.category.toLowerCase()} report is currently <span className="font-bold text-gov-blue">{c.status}</span>.
+                                                    </p>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             )}

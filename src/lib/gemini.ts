@@ -91,3 +91,44 @@ export async function analyzeIssue(description: string) {
         };
     }
 }
+
+/**
+ * Generates a concise Hindi voice assistant summary for the currently logged-in user
+ * based on their active grievances.
+ */
+export async function generateVoiceSummary(complaints: any[], userName: string) {
+    if (!GEMINI_API_KEY) {
+        return `नमस्ते ${userName}। आपके पास ${complaints.length} शिकायतें हैं, जिनमें से ${complaints.filter((c: any) => c.status === 'Pending').length} लंबित हैं।`;
+    }
+
+    const tryGenerate = async (modelName: string) => {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const recentComplaints = complaints.slice(0, 5).map(c => `ID ${c.id}: ${c.category} - Status: ${c.status}`).join('\n');
+        
+        const prompt = `
+        You are 'CivicOS Voice Assistant', an AI helper for citizens of India.
+        The user's name is ${userName}.
+        Here are up to their 5 most recent civic issue reports:
+        ${recentComplaints || 'User has no complaints yet.'}
+
+        Task:
+        Generate a very short, polite, and encouraging voice assistant greeting and summary IN HINDI.
+        - Must be exactly 2-3 sentences max.
+        - Start by greeting the user strictly as "नमस्ते ${userName}."
+        - Mention how many total or pending complaints they have, or mention the status of their most recent complaint.
+        - If they have no complaints, encourage them to report any civic issues in their area.
+        - Keep the vocabulary conversational and polite Hindi.
+        - DO NOT return JSON. DO NOT include markdown formatting. ONLY return the pure spoken text.
+        `;
+
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+    };
+
+    try {
+        return await tryGenerate(GEMINI_MODELS.primary);
+    } catch (error) {
+        console.error("[GEMINI] Voice Summary Error:", error);
+        return `नमस्ते ${userName}। आपके पास ${complaints.length} शिकायतें हैं, जिनमें से ${complaints.filter((c: any) => c.status === 'Pending').length} लंबित हैं।`;
+    }
+}
