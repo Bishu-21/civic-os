@@ -1,82 +1,153 @@
-# CivicOS: AI-Powered Citizen Grievance System
+# 🏛️ CivicOS: AI-Powered National Grievance Redressal
 
-**CivicOS** is a high-fidelity Minimum Viable Product (MVP) designed for the **Municipal Corporation of Delhi (MCD)**. It leverages AI and modern cloud infrastructure to revolutionize how citizens report, track, and verify civic grievances.
+**CivicOS** is a state-of-the-art, high-fidelity platform designed for the **Government of India (National Scope)**. It leverages advanced Artificial Intelligence and Spatial Intelligence to revolutionize how citizens report, track, and verify municipal grievances, bridging the gap between urban residents and local administration.
+
+![CivicOS Dashboard](https://raw.githubusercontent.com/Bishu-21/civic-os/main/citizen_portal_home_design.png)
 
 ---
 
-## 🏛️ Project Vision
-CivicOS aims to bridge the gap between citizens and municipal authorities. By using AI-driven reporting and spatial mapping, it ensures that every streetlight, pothole, or waste issue is documented with precision and resolved with accountability.
+## 🌟 Highlights
+- **🚀 One-Touch Reporting**: Rapidly submit grievances with AI-refined descriptions and photo evidence.
+- **🤖 Gemini AI Intelligence**: Automated categorization, translation, and sanitization of multi-lingual reports.
+- **🎙️ Voice-First Accessibility**: Report issues via natural voice commands powered by Sarvam AI.
+- **📍 Spatial Command Center**: Real-time interactive mapping for city-wide grievance visualization.
+- **🛡️ Secure & Compliant**: Built with Row-Level Security (RLS) and DPDP 2023 data privacy standards.
+- **📱 Fully Responsive**: A premium, "alive" interface that adapts perfectly from mobile to desktop.
+
+---
+
+## 📖 Table of Contents
+1. [Overview](#-overview)
+2. [Tech Stack](#-tech-stack)
+3. [Key Features](#-key-features)
+4. [Getting Started](#-getting-started)
+5. [Usage](#-usage)
+6. [Security & Sanitization](#-security--sanitization)
+7. [Contributing](#-contributing)
+8. [License](#-license)
+
+---
+
+## ℹ️ Overview
+CivicOS solves the fragmented nature of urban grievance management. By transitioning from regional silos to a unified national architecture, it ensures that every streetlight, pothole, or waste issue is documented with geometric precision and resolved with administrative accountability.
+
+The platform is designed to handle the scale and diversity of India, featuring multi-lingual support and low-bandwidth optimizations to serve every citizen, everywhere.
+
+---
+
+## 🛠️ Tech Stack
+| Component | Technology | Usage |
+| :--- | :--- | :--- |
+| **Framework** | [Next.js 16](https://nextjs.org/) | App Router, React 19, Turbopack |
+| **Backend** | [Appwrite](https://appwrite.io/) | Auth, Realtime DB, Blob Storage, RLS |
+| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) | Fluid Design, Glassmorphism, Premium UI |
+| **AI (Cognitive)** | [Google Gemini](https://ai.google.dev/) | Multi-lingual analysis & description cleanup |
+| **AI (Voice)** | [Sarvam AI](https://sarvam.ai/) | Vernacular Voice-to-Text & TTS Assistance |
+| **Mapping** | [Leaflet](https://leafletjs.org/) | Interactive Global Spatial Interface |
+| **Geocoding** | [Geoapify](https://www.geoapify.com/) | Reverse geocoding for precise addressing |
+| **Rate Limiting** | [Upstash Redis](https://upstash.com/) | Distributed rate limiting & security protection |
+
+---
 
 ## 🚀 Key Features
 
-### 1. AI Quick-Report
-- **Multi-Modal Input**: Report issues via text, voice, or image.
-- **AI Analysis**: Powered by **Gemini 2.5 Flash Lite**, the system automatically categorizes issues (e.g., Sanitation, Electrical), estimates priority, and identifies the correct department.
-- **Automated Routing**: Grievances are directed to the specific ward office based on geocoding.
+### 1. Intelligent Grievance Refinement
+Citizens can report in their local dialect (Hindi, Bengali, etc.). Our integrated **Gemini AI** automatically translates, summarizes, and cleans up the description into professional administrative English.
 
-### 2. Digital Identity & DPDP Compliance
-- **Secure Authentication**: OTP-based mobile registration and login via **Appwrite**.
-- **Privacy First**: Fully compliant with the **Digital Personal Data Protection (DPDP) Act, 2023**, ensuring citizen data is handled securely.
-- **Government-Grade UI**: Designed following GIGW and WCAG 2.1 standards for accessibility.
+### 2. Physical & Spatial Mapping
+Every report is geocoded using **Geoapify** and placed on a **Leaflet** map. This allows administrators to see "hotspots" of reported issues and allocate resources where they are needed most.
 
-### 3. Spatial Intelligence Map
-- **Interactive Mapping**: Powered by **Leaflet & OpenStreetMap**.
-- **Reverse Geocoding**: Automatically identifies the exact address and ward of a grievance using **Geoapify**.
-- **Hotspot Visualization**: Administrators can see clusters of reported issues for better resource allocation.
+### 3. Voice Assist & Accessibility
+Designed for inclusivity, CivicOS features a voice-to-text reporting system. Citizens who find typing difficult can simply speak their issue, and the system handles the rest.
 
-### 4. Transparent Resolution
-- **Track Status**: Real-time status updates from "Reported" to "Resolved".
-- **Verification Workflow**: Citizens can verify the quality of work via the platform.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technology | Usage |
-| :--- | :--- | :--- |
-| **Frontend** | [Next.js 16](https://nextjs.org/) | App Router, React, Turbopack |
-| **Styling** | [TailwindCSS](https://tailwindcss.com/) | Responsive, Premium UI Design |
-| **Backend** | [Appwrite](https://appwrite.io/) | Auth, Database, Storage, Sessions |
-| **AI/ML** | [Google Gemini](https://ai.google.dev/) | Issue Analysis & Prioritization |
-| **GEO** | [Geoapify](https://www.geoapify.com/) | Reverse Geocoding API |
-| **Maps** | [Leaflet](https://leafletjs.org/) | Interactive Spatial Interface |
+### 4. Real-Time Tracking Dashboard
+A centralized command center for citizens to track their ticket status from "Reported" to "Resolved" with real-time notifications.
 
 ---
 
 ## 📦 Getting Started
 
 ### Prerequisites
-- Node.js 18.x or higher
-- Appwrite Instance (Cloud or Self-Hosted)
+- **Node.js**: 20.x or higher
+- **Appwrite Cloud**: A project configured with Databases and Storage Buckets.
+- **Upstash Redis**: For rate limiting.
+- **API Keys**: Gemini, Geoapify, and Sarvam AI.
 
-### Environment Variables
-Create a `.env.local` file with the following:
-```env
-NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_APPWRITE_DATABASE_ID=your_db_id
-NEXT_PUBLIC_APPWRITE_PROFILES_COLLECTIONID=your_collection_id
-GEMINI_API_KEY=your_gemini_key
-GEOAPIFY_API_KEY=your_geoapify_key
-```
+### ⬇️ Installation
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Bishu-21/civic-os.git
+   cd civic-os
+   ```
 
-### Installation
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables:**
+   Create a `.env.local` file in the root directory:
+   ```env
+   # Appwrite
+   NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+   NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_id
+   DATABASE_ID=your_id
+   PROFILES_COLLECTION_ID=your_id
+   
+   # AI & Maps
+   GEMINI_API_KEY=your_key
+   GEOAPIFY_API_KEY=your_key
+   SARVAM_API_KEY=your_key
+   
+   # Rate Limiting (Upstash)
+   UPSTASH_REDIS_REST_URL=your_url
+   UPSTASH_REDIS_REST_TOKEN=your_token
+   ```
+
+4. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) to view the portal.
+
+---
+
+## 🛡️ Security & Sanitization
+CivicOS implements a **"Zero-Trust"** security model:
+- **Row-Level Security (RLS)**: Citizens can only modify or delete their own data.
+- **Input Sanitization**: XSS and Injection protection on every text input field.
+- **Rate Limiting**: Protection against brute-force and bot exhausted resources via Upstash Redis.
+- **Prompt Shielding**: Isolated AI processing blocks to prevent prompt injection attacks.
+
+---
+
+## 🧪 Tests
+To run the automated security and integration test suite:
 ```bash
-npm install
-npm run dev
+npm test
 ```
 
 ---
 
-## 📅 Roadmap
-- [x] OTP Authentication Flow
-- [x] AI Issue Analysis
-- [x] Spatial Map Integration
-- [x] Mobile Responsiveness Overhaul (2026 Build)
-- [ ] Blockchain-based verification ledger (Future)
+## 🤝 Contributing
+We welcome contributions to make CivicOS better! 
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
 ## 📜 License
-© 2026 Municipal Corporation of Delhi. All rights reserved.
-Developed for the MCD Civic Innovation Challenge.
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+## ✍️ Authors & Acknowledgments
+- **Bishal Sarkar** - Lead Architect & Developer
+- Developed for the **National Civic Innovation Challenge**.
+- Inspiration from the digital governance initiatives of the **Government of India**.
+
+---
+**Project Status**: Active Development 🚀
