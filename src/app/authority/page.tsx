@@ -61,6 +61,20 @@ export default function AuthorityDashboard() {
     const [newStatus, setNewStatus] = useState("");
     const [afterImage, setAfterImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [resolutionNote, setResolutionNote] = useState("");
+    const [showCircularModal, setShowCircularModal] = useState(false);
+    const [currentRegion, setCurrentRegion] = useState("Delhi NCT Administrative Region");
+
+    // Notification State
+    const [notifications, setNotifications] = useState([
+        { id: 1, title: "New Critical Report", message: "Water leakage reported in Ward 12", time: "2m ago", read: false, type: "critical" },
+        { id: 2, title: "SLA Warning", message: "Case #8821 close to deadline", time: "15m ago", read: false, type: "warning" },
+        { id: 3, title: "System Update", message: "Phase 4 Governance Engine active", time: "1h ago", read: true, type: "info" },
+    ]);
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+    const [showNotifications, setShowNotifications] = useState(false);
+    const hasUnread = notifications.some(n => !n.read);
+
 
     // Stats
     const [stats, setStats] = useState({
@@ -82,6 +96,19 @@ export default function AuthorityDashboard() {
             loadComplaints();
         };
         checkAuth();
+
+        // Geolocation detection
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    // In a real app, we'd reverse geocode here. 
+                    // For demo, we'll simulate a more specific region if coordinates are found.
+                    const city = "South Delhi"; // This could be dynamic from an API
+                    setCurrentRegion(`${city} NCT Administrative Region`);
+                },
+                (error) => console.log("Location access denied, defaulting to Delhi NCT")
+            );
+        }
     }, [router]);
 
     const loadComplaints = async () => {
@@ -138,13 +165,18 @@ export default function AuthorityDashboard() {
                 }
             }
 
-            const res = await updateGrievanceStatusAction(selectedComplaint.id, newStatus, { afterImageUrl });
+            const res = await updateGrievanceStatusAction(selectedComplaint.id, newStatus, { 
+                afterImageUrl,
+                note: resolutionNote 
+            });
             if (res.success) {
                 setShowStatusModal(false);
                 setAfterImage(null);
                 setImagePreview(null);
+                setResolutionNote("");
                 loadComplaints();
             } else {
+
                 alert("Failed to update status: " + res.error);
             }
         } catch (err) {
@@ -159,6 +191,10 @@ export default function AuthorityDashboard() {
             await logoutAction();
             router.push("/auth");
         }
+    };
+
+    const markAllAsRead = () => {
+        setNotifications(notifications.map(n => ({ ...n, read: true })));
     };
 
     const decodeHTMLEntities = (text: string) => {
@@ -205,47 +241,112 @@ export default function AuthorityDashboard() {
                 />
             )}
 
-            <AdminSidebar userProfile={profile} onLogout={handleLogout} />
+            <AdminSidebar 
+                userProfile={profile} 
+                onLogoutAction={handleLogout} 
+                isOpen={showMobileSidebar} 
+                onClose={() => setShowMobileSidebar(false)} 
+            />
 
             {/* Main Content */}
-            <main className="flex-1 lg:ml-64 p-4 md:p-8 pb-32 lg:pb-8">
+            <main className="flex-1 lg:ml-64 p-4 md:p-6 xl:p-8 pb-32 lg:pb-8 max-w-full overflow-x-hidden">
                 {/* Header Section */}
-                <header className="flex items-center gap-2 md:gap-4 mb-6 md:mb-8 bg-white/50 backdrop-blur-md p-2 md:p-4 rounded-2xl md:rounded-3xl border border-white/50 shadow-sm sticky top-0 md:top-4 z-10 transition-all">
+                <header className="flex items-center gap-2 md:gap-4 mb-6 md:mb-8 bg-white/70 backdrop-blur-xl p-2 md:p-3 rounded-2xl md:rounded-3xl border border-white shadow-sm sticky top-0 md:top-4 z-40 transition-all">
                     <button 
                         onClick={() => setShowMobileSidebar(true)}
-                        className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 lg:hidden shrink-0"
+                        className="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 lg:hidden shrink-0 transition-colors"
                     >
                         <Menu className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
 
                     <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
-                        <div className="relative flex-1 hidden xl:block">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-gov-blue transition-colors" />
                             <input 
                                 type="text" 
-                                placeholder="Search by Case ID, Ward or Description..." 
-                                className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-gov-blue/10 transition-all"
+                                placeholder="Search Case ID, Ward..." 
+                                className="w-full pl-11 pr-4 py-2.5 bg-slate-50/50 border border-slate-100 rounded-2xl text-[13px] font-bold text-slate-700 outline-none focus:ring-4 focus:ring-gov-blue/5 focus:bg-white focus:border-gov-blue/20 transition-all placeholder:text-slate-400"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 md:gap-6 shrink-0">
-                    <div className="hidden sm:flex flex-col items-end px-4 border-l border-slate-200">
-                            <span className="text-[10px] font-black text-gov-blue uppercase tracking-widest leading-none mb-1">Status</span>
-                            <span className="text-xs font-bold text-slate-500 uppercase">Operational</span>
+                    <div className="flex items-center gap-2 md:gap-4 shrink-0">
+                        <div className="hidden sm:flex flex-col items-end px-4 border-l border-slate-100">
+                            <span className="text-[9px] font-black text-gov-blue uppercase tracking-widest leading-none mb-1">System State</span>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">Active</span>
+                            </div>
                         </div>
-                        <div className="relative cursor-pointer hover:bg-slate-100 p-2 rounded-xl transition-colors">
-                            <Bell className="w-5 h-5 text-slate-500" />
-                            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className={`p-2.5 rounded-xl transition-all relative ${showNotifications ? 'bg-gov-blue text-white shadow-lg shadow-gov-blue/20' : 'hover:bg-slate-50 text-slate-500'}`}
+                            >
+                                <Bell className="w-5 h-5" />
+                                {hasUnread && (
+                                    <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+                                )}
+                            </button>
+
+                            {/* Notifications Dropdown */}
+                            {showNotifications && (
+                                <>
+                                    <div className="absolute right-0 mt-4 w-85 bg-white rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 z-50">
+                                        <div className="absolute -top-2 right-4 w-4 h-4 bg-white border-l border-t border-slate-100 rotate-45 z-0" />
+                                        <div className="relative z-10">
+                                            <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Intelligent Alerts</h4>
+                                                    <span className="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-black rounded-full leading-none">{notifications.filter(n => !n.read).length}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={markAllAsRead}
+                                                    className="text-[10px] font-black text-gov-blue uppercase hover:underline"
+                                                >
+                                                    Clear All
+                                                </button>
+                                            </div>
+                                            <div className="max-h-[420px] overflow-y-auto custom-scrollbar">
+                                                {notifications.map((n) => (
+                                                    <div 
+                                                        key={n.id} 
+                                                        className={`p-5 border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-all flex gap-4 cursor-pointer group/notify ${!n.read ? 'bg-blue-50/40' : ''}`}
+                                                    >
+                                                        <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 shadow-sm ${
+                                                            n.type === 'critical' ? 'bg-red-500' : n.type === 'warning' ? 'bg-orange-500' : 'bg-blue-500'
+                                                        }`} />
+                                                        <div className="flex-1">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <p className="text-xs font-black text-slate-800 group-hover:text-gov-blue transition-colors">{n.title}</p>
+                                                                <p className="text-[9px] text-slate-300 font-bold uppercase shrink-0">{n.time}</p>
+                                                            </div>
+                                                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{n.message}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="p-4 bg-slate-50 text-center border-t border-slate-100">
+                                                <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-gov-blue transition-colors flex items-center gap-2 mx-auto">
+                                                    View All Archive <ArrowRight size={10}/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Backdrop for easy closing */}
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                                </>
+                            )}
                         </div>
                     </div>
                 </header>
 
-                <div className="space-y-8">
+                <div className="space-y-6 md:space-y-8">
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
                         <MISStatCard 
                             title="Total Grievances" 
                             value={stats.total} 
@@ -295,17 +396,20 @@ export default function AuthorityDashboard() {
                                 </div>
                             </div>
                         </div>
-                        <button className="w-full md:w-auto px-6 py-3 bg-gov-blue text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gov-blue-dark shadow-lg shadow-gov-blue/20 transition-all active:scale-95">
+                        <button 
+                            onClick={() => setShowCircularModal(true)}
+                            className="w-full md:w-auto px-6 py-3 bg-gov-blue text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gov-blue-dark shadow-lg shadow-gov-blue/20 transition-all active:scale-95"
+                        >
                             View Circular
                         </button>
                     </div>
 
                     {/* Operation Control List */}
-                    <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden p-4 md:p-8">
+                    <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden p-4 md:p-6 xl:p-8">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                             <div>
                                 <h2 className="text-xl font-black text-slate-800">Operational Log</h2>
-                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Delhi NCT Administrative Region</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{currentRegion}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 {['All', 'Pending', 'In Progress', 'Resolved'].map((status) => (
@@ -334,7 +438,7 @@ export default function AuthorityDashboard() {
                                 filteredComplaints.map((item) => (
                                     <div 
                                         key={item.id} 
-                                        className="group bg-white border border-slate-100 rounded-2xl p-4 md:p-6 hover:shadow-xl hover:border-gov-blue/20 transition-all duration-300 flex flex-col md:flex-row gap-6 relative"
+                                        className="group bg-white border border-slate-100 rounded-2xl p-4 md:p-5 xl:p-6 hover:shadow-xl hover:border-gov-blue/20 transition-all duration-300 flex flex-col lg:flex-row gap-4 md:gap-6 relative"
                                     >
                                         {/* Digital Seal for Resolved Reports */}
                                         {item.status === 'Resolved' && (
@@ -347,14 +451,38 @@ export default function AuthorityDashboard() {
                                             </div>
                                         )}
 
-                                        <div className="w-full md:w-48 shrink-0">
-                                            <div className="relative h-32 rounded-xl overflow-hidden shadow-inner">
-                                                <Image 
-                                                    src={item.citizenPhoto ? `https://sgp.cloud.appwrite.io/v1/storage/buckets/grievance-images/files/${item.citizenPhoto}/view?project=civicos-app` : "/placeholder.jpg"}
-                                                    alt={item.category}
-                                                    fill
-                                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                                                />
+                                         <div className="w-full lg:w-48 shrink-0">
+                                            <div className="relative h-32 rounded-xl overflow-hidden shadow-inner flex items-center justify-center group/card">
+                                                {!imageErrors[item.id] && item.citizenPhoto ? (
+                                                    <Image 
+                                                        src={`https://sgp.cloud.appwrite.io/v1/storage/buckets/69b563e9002ced5d5f63/files/${item.citizenPhoto}/view?project=69b02bf0001038d5437c`}
+                                                        alt={item.category || "Complaint"}
+                                                        fill
+                                                        className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                                                        sizes="(max-width: 768px) 100vw, 200px"
+                                                        onError={() => setImageErrors(prev => ({...prev, [item.id]: true}))}
+                                                    />
+                                                ) : (
+                                                    <div className={`w-full h-full flex flex-col items-center justify-center p-4 transition-colors duration-500 ${
+                                                        item.category.toLowerCase().includes('light') ? 'bg-amber-50 text-amber-500' :
+                                                        item.category.toLowerCase().includes('garbage') ? 'bg-emerald-50 text-emerald-500' :
+                                                        item.category.toLowerCase().includes('water') ? 'bg-blue-50 text-blue-500' :
+                                                        'bg-slate-50 text-slate-400'
+                                                    }`}>
+                                                        <div className="relative">
+                                                            <div className="absolute -inset-2 bg-current opacity-10 rounded-full animate-pulse" />
+                                                            {item.category.toLowerCase().includes('light') && <Zap size={28} className="relative z-10" />}
+                                                            {item.category.toLowerCase().includes('garbage') && <FileText size={28} className="relative z-10" />}
+                                                            {item.category.toLowerCase().includes('water') && <Activity size={28} className="relative z-10" />}
+                                                            {(!item.category.toLowerCase().includes('light') && !item.category.toLowerCase().includes('garbage') && !item.category.toLowerCase().includes('water')) && <Building2 size={28} className="relative z-10" />}
+                                                        </div>
+                                                        <div className="mt-3 flex flex-col items-center">
+                                                            <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-60">Visual Evidence</span>
+                                                            <span className="text-[10px] font-bold uppercase tracking-tight leading-none mt-1">Digital Schema</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-slate-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </div>
                                         </div>
 
@@ -406,94 +534,197 @@ export default function AuthorityDashboard() {
 
             {/* Status Update Modal */}
             {showStatusModal && selectedComplaint && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-100 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white">
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl my-auto animate-in zoom-in-95 duration-300 border border-white overflow-hidden relative">
+                        {/* High-Fidelity Processing Overlay */}
+                        {isActionLoading && (
+                            <div className="absolute inset-0 bg-white/60 backdrop-blur-md z-[110] flex flex-col items-center justify-center gap-6 animate-in fade-in duration-500">
+                                <div className="relative">
+                                    <div className="w-20 h-20 border-4 border-gov-blue/10 rounded-full" />
+                                    <div className="absolute inset-x-0 inset-y-0 border-4 border-t-gov-blue rounded-full animate-spin" />
+                                    <ShieldCheck className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-gov-blue" />
+                                </div>
+                                <div className="text-center">
+                                    <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight mb-1">Finalizing Resolution</h4>
+                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] animate-pulse">Synchronizing with Citizen Logs...</p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="p-8 space-y-8">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-800">Resolution Update</h3>
-                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Case #{selectedComplaint.id.toUpperCase()}</p>
+                                    <h3 className="text-2xl font-black text-slate-800 leading-tight">Grievance Resolution</h3>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[9px] font-black uppercase tracking-widest">Portal Override</span>
+                                        <p className="text-[11px] font-black text-gov-blue uppercase tracking-widest">Ticket #{selectedComplaint.id.toUpperCase()}</p>
+                                    </div>
                                 </div>
-                                <button onClick={() => {setShowStatusModal(false); setAfterImage(null); setImagePreview(null);}} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 transition-colors">
-                                    <X size={24} />
+                                <button onClick={() => {setShowStatusModal(false); setAfterImage(null); setImagePreview(null);}} className="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 transition-colors">
+                                    <X size={22} />
                                 </button>
                             </div>
 
                             <div className="space-y-4">
-                                <label className="block text-[10px] text-slate-400 font-black uppercase tracking-widest px-2">Select Process Stage</label>
+                                <label className="block text-[10px] text-slate-400 font-black uppercase tracking-widest px-2">Operational Stage</label>
                                 <div className="grid grid-cols-3 gap-3">
-                                    {['Pending', 'In Progress', 'Resolved'].map((status) => (
+                                    {[
+                                        { s: 'Pending', i: <Clock3 size={20}/> },
+                                        { s: 'In Progress', i: <Activity size={20}/> },
+                                        { s: 'Resolved', i: <CheckCircle size={20}/> }
+                                    ].map((stage) => (
                                         <button 
-                                            key={status}
-                                            onClick={() => setNewStatus(status)}
-                                            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                                                newStatus === status 
-                                                ? 'bg-gov-blue/5 border-gov-blue text-gov-blue shadow-inner' 
-                                                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                                            key={stage.s}
+                                            onClick={() => setNewStatus(stage.s)}
+                                            className={`p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-2.5 ${
+                                                newStatus === stage.s 
+                                                ? 'bg-gov-blue/5 border-gov-blue text-gov-blue shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)]' 
+                                                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200 hover:text-slate-600'
                                             }`}
                                         >
-                                            {status === 'Pending' && <Clock3 size={20} />}
-                                            {status === 'In Progress' && <Activity size={20} />}
-                                            {status === 'Resolved' && <CheckCircle size={20} />}
-                                            <span className="text-[10px] font-black uppercase">{status}</span>
+                                            {stage.i}
+                                            <span className="text-[10px] font-black uppercase tracking-tight">{stage.s}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             {newStatus === 'Resolved' && (
-                                <div className="animate-in slide-in-from-bottom-4 duration-500">
-                                    <label className="block text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3 px-2">Completion Evidence (Required)</label>
-                                    <div className="relative group">
-                                        <input 
-                                            type="file" 
-                                            accept="image/*"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) {
-                                                    setAfterImage(file);
-                                                    const reader = new FileReader();
-                                                    reader.onloadend = () => setImagePreview(reader.result as string);
-                                                    reader.readAsDataURL(file);
-                                                }
-                                            }}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center px-2">
+                                            <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Resolution Proof</label>
+                                            <span className="text-[9px] font-black text-red-500 uppercase">Mandatory</span>
+                                        </div>
+                                        <div className="relative group">
+                                            <input 
+                                                type="file" 
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        setAfterImage(file);
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => setImagePreview(reader.result as string);
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            />
+                                            <div className={`h-40 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-6 ${
+                                                imagePreview ? 'border-emerald-600/30' : 'border-slate-100 group-hover:border-gov-blue/50'
+                                            }`}>
+                                                {imagePreview ? (
+                                                    <div className="relative w-full h-full rounded-xl overflow-hidden shadow-lg border-2 border-white">
+                                                        <Image src={imagePreview} alt="Preview" fill className="object-cover" sizes="400px" />
+                                                        <div className="absolute inset-0 bg-emerald-500/10" />
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="w-12 h-12 bg-slate-50 flex items-center justify-center rounded-2xl text-slate-300 mb-3 group-hover:bg-gov-blue group-hover:text-white transition-all shadow-inner">
+                                                            <Camera size={24} />
+                                                        </div>
+                                                        <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Upload Evidence Photo</p>
+                                                        <p className="text-[10px] text-slate-400 font-bold mt-1">PNG, JPG or JPEG max 10MB</p>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="block text-[10px] text-slate-400 font-black uppercase tracking-widest px-2">Official Closing Statement</label>
+                                        <textarea 
+                                            placeholder="Specify actions taken to resolve this grievance..."
+                                            className="w-full h-24 p-5 bg-slate-50 border border-slate-100 rounded-2xl text-[13px] font-bold text-slate-700 outline-none focus:ring-4 focus:ring-gov-blue/5 focus:bg-white focus:border-gov-blue/20 transition-all resize-none placeholder:text-slate-300"
+                                            value={resolutionNote}
+                                            onChange={(e) => setResolutionNote(e.target.value)}
                                         />
-                                        <div className={`h-40 rounded-2xl border-4 border-dashed transition-all flex flex-col items-center justify-center p-6 ${
-                                            imagePreview ? 'border-emerald-600/30' : 'border-slate-100 group-hover:border-gov-blue/50'
-                                        }`}>
-                                            {imagePreview ? (
-                                                <div className="relative w-full h-full rounded-lg overflow-hidden">
-                                                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <Camera size={24} className="text-slate-300 mb-2" />
-                                                    <p className="text-xs font-black text-slate-800">CLICK TO UPLOAD PROOF</p>
-                                                </>
-                                            )}
+                                    </div>
+
+                                    <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-500/20">
+                                            <Bell size={18} className="animate-pulse" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[13px] font-black text-emerald-900 leading-tight mb-0.5">Automated Broadcast</p>
+                                            <p className="text-[11px] font-bold text-emerald-700 leading-tight opacity-80">
+                                                Closing this will notify all residents in <span className="font-black underline">{selectedComplaint.ward}</span>.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            <div className="flex gap-4 pt-4">
+                            <div className="flex gap-4 pt-4 border-t border-slate-50">
                                 <button 
                                     onClick={handleUpdateStatus}
-                                    disabled={isActionLoading || (newStatus === 'Resolved' && !afterImage)}
-                                    className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all flex items-center justify-center gap-2 ${
-                                        newStatus === 'Resolved' && !afterImage 
-                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                                        : 'bg-gov-blue text-white hover:scale-105 active:scale-95 shadow-gov-blue/20'
+                                    disabled={isActionLoading || (newStatus === 'Resolved' && (!afterImage || !resolutionNote.trim()))}
+                                    className={`flex-1 py-4.5 rounded-2xl font-black uppercase tracking-[0.15em] text-[11px] shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 ${
+                                        newStatus === 'Resolved' && (!afterImage || !resolutionNote.trim())
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
+                                        : 'bg-slate-900 text-white hover:bg-gov-blue hover:shadow-gov-blue/25 hover:-translate-y-0.5'
                                     }`}
                                 >
-                                    {isActionLoading ? (
-                                        <Loader2 size={16} className="animate-spin" /> 
-                                    ) : (
-                                        <>Synchronize Status <ArrowRight size={16}/></>
+                                    {isActionLoading ? 'Processing...' : (
+                                        <>Submit Official Update <ArrowRight size={16}/></>
                                     )}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Official Directive Modal (Circular) */}
+            {showCircularModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[120] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white">
+                        <div className="bg-gov-blue p-10 text-white relative">
+                            <div className="absolute top-0 right-0 p-10 opacity-10">
+                                <ShieldCheck size={160} strokeWidth={1} />
+                            </div>
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest">Directive #2026/04</div>
+                                    <div className="px-3 py-1 bg-red-400 rounded-lg text-[10px] font-black uppercase tracking-widest">Priority 1</div>
+                                </div>
+                                <h3 className="text-4xl font-black leading-tight tracking-tight">Official Administrative Directive</h3>
+                                <div className="flex items-center gap-6 mt-6">
+                                    <div className="flex items-center gap-2">
+                                        <User size={16} className="opacity-60" />
+                                        <span className="text-xs font-bold">Issued by: Div. Commissioner</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Clock3 size={16} className="opacity-60" />
+                                        <span className="text-xs font-bold">26 March 2026</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-10 space-y-8">
+                            <div className="space-y-4">
+                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Subject: Urgent Intervention in Ward 42</h4>
+                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 text-slate-600 font-medium leading-relaxed italic">
+                                    "Due to multiple reports of systemic infrastructure failure in Ward 42 during the current NCT modernization phase, all departmental heads are directed to prioritize grievances involving Power Grid instability and Water Main maintenance. Immediate verification of site proofs is mandatory before ticket closure."
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="p-5 rounded-2xl bg-orange-50 border border-orange-100">
+                                    <div className="text-[10px] font-black text-orange-600 uppercase mb-2">Primary Ward</div>
+                                    <div className="text-lg font-black text-orange-900">Ward 42 (Delhi NCT)</div>
+                                </div>
+                                <div className="p-5 rounded-2xl bg-indigo-50 border border-indigo-100">
+                                    <div className="text-[10px] font-black text-indigo-600 uppercase mb-2">Compliance SLA</div>
+                                    <div className="text-lg font-black text-indigo-900">Within 24 Hours</div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowCircularModal(false)}
+                                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] hover:bg-gov-blue transition-all active:scale-95 shadow-xl shadow-slate-900/10"
+                            >
+                                Acknowledge Directive
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -504,7 +735,7 @@ export default function AuthorityDashboard() {
 
 function MISStatCard({ title, value, trend, trendUp, icon, subtitle }: any) {
     return (
-        <div className="bg-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="bg-white p-4 xl:p-6 rounded-[24px] xl:rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
             <div className="flex justify-between items-start mb-4 md:mb-6">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 rounded-xl md:rounded-2xl flex items-center justify-center shadow-inner">
                     {icon}

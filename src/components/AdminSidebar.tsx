@@ -13,7 +13,8 @@ import {
     ArrowLeft,
     FileText,
     Users,
-    Zap
+    Zap,
+    X
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -22,7 +23,9 @@ interface AdminSidebarProps {
         role: string;
         profileImageUrl?: string;
     } | null;
-    onLogout: () => void;
+    onLogoutAction: () => void;
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
 const adminNavigation = [
@@ -33,11 +36,11 @@ const adminNavigation = [
     { name: 'System Settings', href: '#', icon: Settings },
 ];
 
-export default function AdminSidebar({ userProfile, onLogout }: AdminSidebarProps) {
+export default function AdminSidebar({ userProfile, onLogoutAction, isOpen, onClose }: AdminSidebarProps) {
     const pathname = usePathname();
 
     return (
-        <aside className="w-64 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-50">
+        <aside className={`w-64 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 transform lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="p-6 flex items-center justify-between border-b border-slate-50">
                 <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10">
@@ -54,6 +57,9 @@ export default function AdminSidebar({ userProfile, onLogout }: AdminSidebarProp
                         <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">Authority Portal</p>
                     </div>
                 </div>
+                <button onClick={onClose} className="lg:hidden p-2 hover:bg-slate-50 rounded-xl text-slate-400">
+                    <X className="w-5 h-5" />
+                </button>
             </div>
 
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -87,7 +93,7 @@ export default function AdminSidebar({ userProfile, onLogout }: AdminSidebarProp
 
                 <div className="pt-4 mt-auto">
                     <button 
-                        onClick={onLogout}
+                        onClick={onLogoutAction}
                         className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-all"
                     >
                         <LogOut className="w-4 h-4 text-red-400" />

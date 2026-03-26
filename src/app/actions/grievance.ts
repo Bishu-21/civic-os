@@ -401,7 +401,11 @@ export async function syncGrievanceUserDetailsAction(userId: string, newName: st
 /**
  * Update the status of a grievance (Authority Only)
  */
-export async function updateGrievanceStatusAction(complaintId: string, newStatus: string, resolutionData?: { afterImageUrl?: string, note?: string }) {
+export async function updateGrievanceStatusAction(
+    complaintId: string, 
+    newStatus: string, 
+    resolutionData?: { afterImageUrl?: string, note?: string }
+) {
     try {
         const sessionSecret = await getServerSession();
         if (!sessionSecret) return { success: false, error: 'NO_SESSION' };
@@ -436,9 +440,13 @@ export async function updateGrievanceStatusAction(complaintId: string, newStatus
         if (newStatus === 'Resolved') {
             updateData.resolvedAt = new Date().toISOString();
             updateData.resolvedByName = user.name;
-            updateData.resolvedByRole = "Authorized Official"; // In real app, fetch from profile.role
+            updateData.resolvedByRole = "Authorized Official"; 
+            
             if (resolutionData?.afterImageUrl) {
                 updateData.afterImageUrl = resolutionData.afterImageUrl;
+            }
+            if (resolutionData?.note) {
+                updateData.resolutionNote = resolutionData.note;
             }
             
             // Hyperlocal Loop Simulation
@@ -459,6 +467,57 @@ export async function updateGrievanceStatusAction(complaintId: string, newStatus
         return { success: false, error: error.message };
     }
 }
+
+/**
+ * Fetch recently resolved grievances near a location for hyperlocal notifications
+ */
+export async function getHyperlocalResolutionsAction(lat: number, lng: number, radiusKm: number = 2.0) {
+    try {
+        const sessionSecret = await getServerSession();
+        if (!sessionSecret) return { success: false, error: 'NO_SESSION' };
+        
+        const { databases } = createAppwriteClient(sessionSecret);
+
+        // Fetch latest resolved docs
+        const response = await databases.listDocuments({
+            databaseId: DATABASE_ID,
+            collectionId: GRIEVANCES_COLLECTION_ID,
+            queries: [
+                Query.equal('status', 'Resolved'),
+                Query.orderDesc('resolvedAt'),
+                Query.limit(20)
+            ]
+        });
+
+        const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+            const R = 6371; // km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        };
+
+        const nearbyResolved = response.documents.filter((doc: any) => {
+            if (!doc.lat || !doc.lng) return false;
+            const dist = getDistance(lat, lng, Number(doc.lat), Number(doc.lng));
+            return dist <= radiusKm;
+        }).map((doc: any) => ({
+            ...doc,
+            id: doc.$id
+        }));
+
+        return JSON.parse(JSON.stringify({ success: true, resolutions: nearbyResolved }));
+    } catch (error: any) {
+        console.error("Hyperlocal Resolutions Error:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+
 /**
  * Cached helper for live activity to protect Appwrite limits and improve performance.
  * Shared across all users for 60 seconds.
