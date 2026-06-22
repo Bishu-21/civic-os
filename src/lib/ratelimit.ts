@@ -40,3 +40,56 @@ export async function getClientIp() {
     }
     return "127.0.0.1";
 }
+
+// Circuit Breaker State
+let isRedisHealthy = true;
+let lastHealthCheck = 0;
+const HEALTH_CHECK_COOLDOWN = 60000; // 60 seconds
+
+export function markRedisUnhealthy() {
+    if (isRedisHealthy) {
+        console.warn(`[REDIS_CIRCUIT_BREAKER] Redis marked as UNHEALTHY. Bypassing Redis operations.`);
+        isRedisHealthy = false;
+        lastHealthCheck = Date.now();
+    }
+}
+
+export function isRedisAvailable(): boolean {
+    if (!isRedisHealthy) {
+        // Periodically retry after cooldown to see if Redis recovered
+        if (Date.now() - lastHealthCheck > HEALTH_CHECK_COOLDOWN) {
+            console.log(`[REDIS_CIRCUIT_BREAKER] Cooldown finished. Retrying Redis health...`);
+            isRedisHealthy = true;
+            return true;
+        }
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Resilient rate limit wrapper that fails open if Upstash Redis is down or unreachable.
+ * Implements a 1.0s timeout and utilizes the circuit breaker.
+ */
+export async function checkRateLimit(limiter: Ratelimit, key: string): Promise<{ success: boolean }> {
+    if (!isRedisAvailable()) {
+        return { success: true };
+    }
+    try {
+        const limitPromise = limiter.limit(key);
+        const timeoutPromise = new Promise<any>((resolve) => 
+            setTimeout(() => {
+                console.warn(`[RATELIMIT] Upstash Redis timed out. Failing open.`);
+                markRedisUnhealthy();
+                resolve({ success: true });
+            }, 1000)
+        );
+        const result = await Promise.race([limitPromise, timeoutPromise]);
+        return { success: result.success };
+    } catch (error: any) {
+        console.error(`[RATELIMIT_ERROR] Upstash rate limit connection failed: ${error.message}. Failing open.`);
+        markRedisUnhealthy();
+        return { success: true };
+    }
+}
+

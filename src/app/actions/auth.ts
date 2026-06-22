@@ -5,13 +5,14 @@ import { cookies } from 'next/headers';
 import { env } from '@/lib/env';
 import { Query, Permission, Role } from 'node-appwrite';
 import { Schemas, sanitizeString } from "@/lib/security";
-import { strictLimiter, getClientIp } from "@/lib/ratelimit";
+import { strictLimiter, getClientIp, checkRateLimit } from "@/lib/ratelimit";
 import { getCachedProfile, setCachedProfile } from "@/lib/cache";
+import { UserProfile } from "@/lib/types";
 
 export async function createPhoneTokenAction(email: string) {
     try {
         const ip = await getClientIp();
-        const { success: limitOk } = await strictLimiter.limit(ip);
+        const { success: limitOk } = await checkRateLimit(strictLimiter, ip);
         if (!limitOk) {
             return JSON.parse(JSON.stringify({ success: false, error: "Too many requests. Please try again later." }));
         }
@@ -53,7 +54,7 @@ export async function verifyOtpAction(userId: string, secret: string) {
     try {
         // 0. Rate Limiting (Strict)
         const ip = await getClientIp();
-        const { success: limitOk } = await strictLimiter.limit(ip);
+        const { success: limitOk } = await checkRateLimit(strictLimiter, ip);
         if (!limitOk) {
             return JSON.parse(JSON.stringify({ success: false, error: "Too many verification attempts. Please wait a minute." }));
         }
@@ -183,7 +184,7 @@ export async function checkRegistrationAction(providedSecret?: string) {
             });
         }
 
-        const { account: serverAccount, databases } = createAppwriteClient(sessionSecret);
+        const { account: serverAccount, tablesDB } = createAppwriteClient(sessionSecret);
         
         // Wrap the account.get with RETRY logic for stability (ECONNRESET/Fetch failures)
         let user;
@@ -214,13 +215,13 @@ export async function checkRegistrationAction(providedSecret?: string) {
         try {
             // Because legacy profile rows have arbitrary generated document IDs instead of matching user.$id,
             // we query by the 'userId' column to guarantee a correct lookup.
-            const profileList = await databases.listDocuments({
+            const profileList = await tablesDB.listRows({
                 databaseId: env.DATABASE_ID,
-                collectionId: env.PROFILES_COLLECTION_ID,
+                tableId: env.PROFILES_COLLECTION_ID,
                 queries: [Query.equal('userId', user.$id), Query.limit(1)]
             });
             
-            if (profileList.documents.length > 0) {
+            if (profileList.rows.length > 0) {
                 console.log(`[AUTH_ACTION_DEBUG] Profile document found for user ${user.$id}. Not a new user.`);
                 isNewUser = false;
             } else {
@@ -273,14 +274,14 @@ export async function getCurrentUserAction() {
         }
 
         // Fetch profile with backoff to get role
-        let role = (user.email === 'bs922268@gmail.com') ? 'authority' : 'citizen';
+        let role = 'citizen';
         let profileList;
         for (let i = 0; i < 3; i++) {
             try {
-                const { databases } = createAppwriteClient(sessionSecret);
-                profileList = await databases.listDocuments({
+                const { tablesDB } = createAppwriteClient(sessionSecret);
+                profileList = await tablesDB.listRows({
                     databaseId: env.DATABASE_ID,
-                    collectionId: env.PROFILES_COLLECTION_ID,
+                    tableId: env.PROFILES_COLLECTION_ID,
                     queries: [Query.equal('userId', user.$id), Query.limit(1)]
                 });
                 break;
@@ -295,11 +296,10 @@ export async function getCurrentUserAction() {
             }
         }
 
-        if (profileList && profileList.documents.length > 0) {
-            // Database role overrides if present, but for official email, authority is primary
-            const dbRole = profileList.documents[0].role;
+        if (profileList && profileList.rows.length > 0) {
+            // Database role overrides if present
+            const dbRole = profileList.rows[0].role;
             if (dbRole) role = dbRole;
-            if (user.email === 'bs922268@gmail.com') role = 'authority'; // Force for test
         }
 
         // Strict serialization to avoid "unexpected response" (Next.js crash on complex objects)
@@ -314,8 +314,8 @@ export async function getCurrentUserAction() {
         };
 
         // SYNC CACHE
-        if (profileList && profileList.documents.length > 0) {
-             await setCachedProfile(user.$id, profileList.documents[0]);
+        if (profileList && profileList.rows.length > 0) {
+             await setCachedProfile(user.$id, profileList.rows[0] as unknown as UserProfile);
         }
 
         return JSON.parse(JSON.stringify({ 
@@ -368,55 +368,16 @@ export async function officialLoginAction(formData: FormData) {
     try {
         console.log(`[AUTH_OFFICIAL] Authenticating official: ${email}`);
         
-        // Ensure absolute URL on server
-        let endpoint = env.APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1';
-        if (endpoint.startsWith('/')) {
-            endpoint = 'https://sgp.cloud.appwrite.io/v1';
-        }
+        const { account: authAccount } = createAppwriteClient();
+        const session = await authAccount.createEmailPasswordSession({
+            email,
+            password
+        });
         
-        const finalUrl = `${endpoint}/account/sessions/email`;
-
-        // RE-TRY LOGIC for ECONNRESET stability
-        let response;
-        for (let attempt = 1; attempt <= 2; attempt++) {
-            try {
-                response = await fetch(finalUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Appwrite-Project': env.APPWRITE_PROJECT_ID || ''
-                    },
-                    body: JSON.stringify({ email, password }),
-                    cache: 'no-store'
-                });
-                if (response.ok) break;
-            } catch (err: any) {
-                if (attempt === 2) throw err;
-                console.warn(`[AUTH_OFFICIAL] Attempt ${attempt} failed: ${err.message}. Retrying...`);
-                await new Promise(r => setTimeout(r, 500));
-            }
-        }
-
-        if (!response || !response.ok) {
-            const errorText = await response?.text() || 'No response';
-            throw new Error(`Login Error: ${errorText}`);
-        }
-
-        const session = await response.json();
-        
-        // Extract the session secret from the Set-Cookie header
-        const setCookieHeader = response.headers.get('set-cookie');
-        let sessionSecret = session.secret; // Fallback if returned
-        
-        if (!sessionSecret && setCookieHeader) {
-            const match = setCookieHeader.match(/a_session_[^=;]+=([^;]+)/);
-            if (match) {
-                sessionSecret = match[1];
-            }
-        }
+        const sessionSecret = session.secret;
 
         if (!sessionSecret) {
-            throw new Error("Failed to extract session secret from login response.");
+            throw new Error("Failed to extract session secret from Appwrite response. Check SDK configuration.");
         }
 
         const cookieStore = await cookies();
@@ -430,38 +391,53 @@ export async function officialLoginAction(formData: FormData) {
 
         console.log(`[AUTH_ACTION_LOGIN] Login successful, bridged cookie securely.`);
         
-        // AUTO-SEED: Ensure official profile exists
-        if (email === 'bs922268@gmail.com') {
+        // AUTO-SEED: Ensure official profile exists for domain or email pattern
+        const emailLower = email.toLowerCase();
+        const isOfficial = emailLower.endsWith('@civicos.systems') || 
+                           emailLower.includes('cm') || 
+                           emailLower.includes('team') || 
+                           emailLower === 'bs922268@gmail.com';
+
+        if (isOfficial) {
             try {
-                const { databases } = createAppwriteClient(sessionSecret);
+                const { tablesDB } = createAppwriteClient(sessionSecret);
                 // Check if profile exists
+                let profile = null;
                 let profileExists = false;
                 try {
-                    await databases.getDocument({
+                    profile = await tablesDB.getRow({
                         databaseId: env.DATABASE_ID,
-                        collectionId: env.PROFILES_COLLECTION_ID,
-                        documentId: session.userId
+                        tableId: env.PROFILES_COLLECTION_ID,
+                        rowId: session.userId
                     });
                     profileExists = true;
                 } catch (e) {
                     profileExists = false;
                 }
 
+                // Determine target role from email
+                let determinedRole = 'authority';
+                if (emailLower.includes('cm')) {
+                    determinedRole = 'cm';
+                } else if (emailLower.includes('team')) {
+                    determinedRole = 'team';
+                }
+
                 if (!profileExists) {
-                    console.log(`[AUTH_OFFICIAL] Creating profile for ${email}...`);
+                    console.log(`[AUTH_OFFICIAL] Creating profile for official ${email} with role: ${determinedRole}...`);
                     try {
-                        await databases.createDocument({
+                        await tablesDB.createRow({
                             databaseId: env.DATABASE_ID,
-                            collectionId: env.PROFILES_COLLECTION_ID,
-                            documentId: session.userId,
+                            tableId: env.PROFILES_COLLECTION_ID,
+                            rowId: session.userId,
                             data: {
                                 userId: session.userId,
-                                name: "Commissioner Bishal",
+                                name: email.split('@')[0],
                                 govIdType: "PAN",
                                 govIdNumber: "OFFICIAL999",
                                 profileImageUrl: "",
-                                address: "Delhi Municipal HQ",
-                                role: "authority"
+                                address: "Delhi Secretariat",
+                                role: determinedRole
                             },
                             permissions: [
                                 Permission.read(Role.user(session.userId)),
@@ -475,19 +451,23 @@ export async function officialLoginAction(formData: FormData) {
                             console.log(`[AUTH_OFFICIAL] Profile already exists (409).`);
                         } else throw createErr;
                     }
-                } else {
-                    console.log(`[AUTH_OFFICIAL] Profile already exists, ensuring 'authority' role.`);
-                    await databases.updateDocument({
-                        databaseId: env.DATABASE_ID,
-                        collectionId: env.PROFILES_COLLECTION_ID,
-                        documentId: session.userId,
-                        data: { role: 'authority' },
-                        permissions: [
-                            Permission.read(Role.user(session.userId)),
-                            Permission.update(Role.user(session.userId)),
-                            Permission.delete(Role.user(session.userId)),
-                        ]
-                    });
+                } else if (profile) {
+                    const currentRole = profile.role;
+                    // If profile exists but does not have an admin role, or if we want to align with email prefix, upgrade/set it.
+                    if (!currentRole || currentRole === 'citizen' || (determinedRole !== 'authority' && currentRole === 'authority')) {
+                        console.log(`[AUTH_OFFICIAL] Profile already exists, updating role to: ${determinedRole}.`);
+                        await tablesDB.updateRow({
+                            databaseId: env.DATABASE_ID,
+                            tableId: env.PROFILES_COLLECTION_ID,
+                            rowId: session.userId,
+                            data: { role: determinedRole },
+                            permissions: [
+                                Permission.read(Role.user(session.userId)),
+                                Permission.update(Role.user(session.userId)),
+                                Permission.delete(Role.user(session.userId)),
+                            ]
+                        });
+                    }
                 }
             } catch (seedErr: any) {
                 console.error("[AUTH_OFFICIAL] Profile Auto-Seed Error:", seedErr.message);

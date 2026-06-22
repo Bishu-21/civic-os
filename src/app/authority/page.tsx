@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -39,8 +39,10 @@ import {
     Sparkles
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
-import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import { getAllGrievancesAction, updateGrievanceStatusAction, uploadGrievanceImageAction } from "@/app/actions/grievance";
+import { auditGrievancesAction } from "@/app/actions/audit";
 import { Complaint } from "@/lib/types";
 import AdminSidebar from "@/components/AdminSidebar";
 
@@ -48,9 +50,9 @@ export default function AuthorityDashboard() {
     const router = useRouter();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [complaints, setComplaints] = useState<Complaint[]>([]);
-    const [filteredComplaints, setFilteredComplaints] = useState<Complaint[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isActionLoading, setIsActionLoading] = useState(false);
+    const [isAuditLoading, setIsAuditLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
@@ -85,11 +87,29 @@ export default function AuthorityDashboard() {
         avgResolutionTime: "14.2h"
     });
 
+    const loadComplaints = async () => {
+        setIsLoading(true);
+        const res = await getAllGrievancesAction();
+        if (res.success && res.grievances) {
+            const docs = res.grievances as Complaint[];
+            setComplaints(docs);
+            
+            const resolved = docs.filter(c => c.status === 'Resolved').length;
+            setStats({
+                total: docs.length,
+                resolved: resolved,
+                pending: docs.length - resolved,
+                avgResolutionTime: "14.2h"
+            });
+        }
+        setIsLoading(false);
+    };
+
     useEffect(() => {
         const checkAuth = async () => {
             const res = await getServerProfileAction();
-            // Restrict to authority role
-            if (!res.success || res.profile?.role !== 'authority') {
+            // Restrict to authority, cm, or team role
+            if (!res.success || (res.profile?.role !== 'authority' && res.profile?.role !== 'cm' && res.profile?.role !== 'team')) {
                 router.push("/dashboard");
                 return;
             }
@@ -112,26 +132,7 @@ export default function AuthorityDashboard() {
         }
     }, [router]);
 
-    const loadComplaints = async () => {
-        setIsLoading(true);
-        const res = await getAllGrievancesAction();
-        if (res.success && res.grievances) {
-            const docs = res.grievances as Complaint[];
-            setComplaints(docs);
-            setFilteredComplaints(docs);
-            
-            const resolved = docs.filter(c => c.status === 'Resolved').length;
-            setStats({
-                total: docs.length,
-                resolved: resolved,
-                pending: docs.length - resolved,
-                avgResolutionTime: "14.2h"
-            });
-        }
-        setIsLoading(false);
-    };
-
-    useEffect(() => {
+    const filteredComplaints = useMemo(() => {
         let result = complaints;
         if (statusFilter !== "All") {
             result = result.filter(c => c.status === statusFilter);
@@ -144,7 +145,7 @@ export default function AuthorityDashboard() {
                 c.id.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
-        setFilteredComplaints(result);
+        return result;
     }, [searchTerm, statusFilter, complaints]);
 
     const handleUpdateStatus = async () => {
@@ -196,6 +197,25 @@ export default function AuthorityDashboard() {
 
     const markAllAsRead = () => {
         setNotifications(notifications.map(n => ({ ...n, read: true })));
+    };
+
+    const handleRunSLAExcalation = async () => {
+        if (isAuditLoading) return;
+        setIsAuditLoading(true);
+        try {
+            const res = await auditGrievancesAction();
+            if (res.success) {
+                alert(`SLA Audit Complete: ${res.count} grievances escalated.`);
+                loadComplaints(); // Reload to show updated status
+            } else {
+                alert("Audit failed: " + res.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Audit execution error.");
+        } finally {
+            setIsAuditLoading(false);
+        }
     };
 
     const decodeHTMLEntities = (text: string) => {
@@ -282,6 +302,27 @@ export default function AuthorityDashboard() {
                             </div>
                         </div>
 
+                        {/* SLA Audit Trigger */}
+                        <div className="border-l border-slate-100 pl-4 flex items-center">
+                            <button 
+                                onClick={handleRunSLAExcalation}
+                                disabled={isAuditLoading}
+                                title="Run SLA Audit & Escalations"
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest ${
+                                    isAuditLoading 
+                                    ? 'bg-slate-100 text-slate-400 cursor-wait' 
+                                    : 'bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-lg hover:shadow-red-500/10 active:scale-95'
+                                }`}
+                            >
+                                {isAuditLoading ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <ShieldCheck className="w-4 h-4" />
+                                )}
+                                <span className="hidden xl:inline">{isAuditLoading ? 'Auditing...' : 'Trigger SLA Audit'}</span>
+                            </button>
+                        </div>
+
                         <div className="relative">
                             <button 
                                 onClick={() => setShowNotifications(!showNotifications)}
@@ -354,7 +395,7 @@ export default function AuthorityDashboard() {
                             trend="+2.1%" 
                             trendUp={true} 
                             icon={<FileText className="text-gov-blue w-5 h-5" />} 
-                            subtitle="National Registry"
+                            subtitle="Delhi NCT Registry"
                         />
                         <MISStatCard 
                             title="Pending Action" 
@@ -730,7 +771,7 @@ export default function AuthorityDashboard() {
                                 <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Urgent Intervention in Ward 42</h4>
                                 <div className="p-6 bg-white rounded-3xl border border-slate-100 text-slate-600 font-medium leading-relaxed italic shadow-sm relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-1 h-full bg-red-400"></div>
-                                    "Due to multiple reports of systemic infrastructure failure in Ward 42 during the current NCT modernization phase, all departmental heads are directed to prioritize grievances involving Power Grid instability and Water Main maintenance. Immediate verification of site proofs is mandatory before ticket closure."
+                                    &quot;Due to multiple reports of systemic infrastructure failure in Ward 42 during the current NCT modernization phase, all departmental heads are directed to prioritize grievances involving Power Grid instability and Water Main maintenance. Immediate verification of site proofs is mandatory before ticket closure.&quot;
                                 </div>
                             </div>
 
@@ -759,7 +800,16 @@ export default function AuthorityDashboard() {
     );
 }
 
-function MISStatCard({ title, value, trend, trendUp, icon, subtitle }: any) {
+interface MISStatCardProps {
+    title: string;
+    value: string | number;
+    trend: string;
+    trendUp: boolean;
+    icon: React.ReactNode;
+    subtitle: string;
+}
+
+function MISStatCard({ title, value, trend, trendUp, icon, subtitle }: MISStatCardProps) {
     return (
         <div className="bg-white p-4 xl:p-6 rounded-[24px] xl:rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
             <div className="flex justify-between items-start mb-4 md:mb-6">

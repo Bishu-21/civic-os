@@ -38,8 +38,8 @@ export default function Sidebar() {
                     />
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-sm font-black text-gov-blue leading-tight uppercase tracking-tight">Govt. of India</span>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">CivicOS National</span>
+                    <span className="text-sm font-black text-gov-blue leading-tight uppercase tracking-tight">Govt. of NCT Delhi</span>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">CM Grievance Dashboard</span>
                 </div>
             </div>
 
@@ -69,7 +69,7 @@ export default function Sidebar() {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-xs font-bold text-mcd-navy">S. K. Verma</span>
-                        <span className="text-[10px] text-mcd-slate">National Commissioner</span>
+                        <span className="text-[10px] text-mcd-slate">CMO Team</span>
                     </div>
                 </div>
             </div>

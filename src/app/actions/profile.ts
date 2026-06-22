@@ -6,19 +6,9 @@ import { cookies } from 'next/headers';
 import { env } from '@/lib/env';
 import { InputFile } from 'node-appwrite/file';
 import { Schemas, sanitizeString } from "@/lib/security";
-import { standardLimiter, getClientIp } from "@/lib/ratelimit";
+import { standardLimiter, getClientIp, checkRateLimit } from "@/lib/ratelimit";
 import { getCachedProfile, setCachedProfile, invalidateProfileCache } from "@/lib/cache";
-
-export interface UserProfile {
-    userId: string;
-    name: string;
-    govIdType: string;
-    govIdNumber: string;
-    profileImageUrl?: string;
-    email?: string;
-    address?: string;
-    role: 'citizen' | 'authority';
-}
+import { UserProfile } from "@/lib/types";
 
 /**
  * Get the current user's profile from Appwrite Database
@@ -35,29 +25,10 @@ export async function getServerProfileAction() {
         }
 
         // Real Session Fetch
-        const { account, databases } = createAppwriteClient(sessionSecret);
+        const { account, tablesDB } = createAppwriteClient(sessionSecret);
         const user = await account.get();
         console.log(`[PROFILE_SERVER_V5] Authenticated User: ${user.name} (${user.$id})`);
         
-        // 1. HARDCODED ROLE for Official User (Bypass DB if needed)
-        if (user.email === 'bs922268@gmail.com') {
-            const officialProfile = {
-                userId: user.$id,
-                name: user.name || "Commissioner Bishal",
-                email: user.email,
-                role: 'authority',
-                address: "Delhi Municipal HQ",
-                govIdType: "PAN",
-                govIdNumber: "OFFICIAL999",
-                profileImageUrl: ""
-            };
-            return JSON.parse(JSON.stringify({ 
-                success: true, 
-                isFullProfile: true, 
-                profile: officialProfile
-            }));
-        }
-
         // 1.5 CHECK CACHE FIRST
         const cached = await getCachedProfile(user.$id);
         if (cached) {
@@ -73,22 +44,22 @@ export async function getServerProfileAction() {
             let profileDoc;
             try {
                 // v23 Object Style
-                profileDoc = await databases.getDocument({
+                profileDoc = await tablesDB.getRow({
                     databaseId: DATABASE_ID, 
-                    collectionId: PROFILES_COLLECTION_ID, 
-                    documentId: user.$id
+                    tableId: PROFILES_COLLECTION_ID, 
+                    rowId: user.$id
                 });
                 console.log(`[PROFILE_SERVER_V7] Direct ID lookup success for ${user.$id}.`);
             } catch (e) {
                 console.log(`[PROFILE_SERVER_V7] Direct ID lookup failed for ${user.$id}, falling back to list query.`);
                 // v23 Object Style
-                const profileList = await databases.listDocuments({
+                const profileList = await tablesDB.listRows({
                     databaseId: DATABASE_ID,
-                    collectionId: PROFILES_COLLECTION_ID,
+                    tableId: PROFILES_COLLECTION_ID,
                     queries: [Query.equal('userId', user.$id), Query.limit(1)]
                 });
-                if (profileList.documents.length > 0) {
-                    profileDoc = profileList.documents[0];
+                if (profileList.rows.length > 0) {
+                    profileDoc = profileList.rows[0];
                 }
             }
             
@@ -119,8 +90,7 @@ export async function getServerProfileAction() {
                 profileImageUrl: profileImageUrl, // Use the constructed URL
                 email: user.email,
                 address: doc.address || '',
-                // Hardcoded role for the specific test user
-                role: (user.email === 'bs922268@gmail.com') ? 'authority' : (doc.role || 'citizen')
+                role: doc.role || 'citizen'
             };
 
             // UPDATE CACHE
@@ -157,7 +127,7 @@ export async function updateUserProfileAction(data: Partial<UserProfile>) {
     try {
         // 0. Rate Limiting (Standard)
         const ip = await getClientIp();
-        const { success: limitOk } = await standardLimiter.limit(ip);
+        const { success: limitOk } = await checkRateLimit(standardLimiter, ip);
         if (!limitOk) {
             return JSON.parse(JSON.stringify({ success: false, error: 'RATE_LIMIT_EXCEEDED' }));
         }
@@ -207,7 +177,7 @@ export async function createProfileWithImageAction(formData: FormData) {
     try {
         // 0. Rate Limiting (Standard)
         const ip = await getClientIp();
-        const { success: limitOk } = await standardLimiter.limit(ip);
+        const { success: limitOk } = await checkRateLimit(standardLimiter, ip);
         if (!limitOk) {
             return JSON.parse(JSON.stringify({ success: false, error: 'RATE_LIMIT_EXCEEDED' }));
         }

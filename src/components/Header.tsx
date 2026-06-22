@@ -4,8 +4,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { HiOutlineUser, HiOutlineSearch, HiOutlineViewGrid, HiOutlineLogout, HiOutlineMenuAlt3, HiX, HiOutlineMoon, HiOutlineSun } from "react-icons/hi";
-import { generateDemoData } from "@/lib/store";
+import { HiOutlineViewGrid, HiOutlineLogout, HiOutlineMenuAlt3, HiX } from "react-icons/hi";
 import { getCurrentUserAction, logoutAction } from "@/app/actions/auth";
 import TrackStatusModal from "./TrackStatusModal";
 
@@ -16,7 +15,6 @@ export default function Header() {
     const [isLoading, setIsLoading] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
 
     const isAuthPage = pathname?.startsWith('/auth');
 
@@ -40,29 +38,7 @@ export default function Header() {
             setIsLoading(false);
         };
         checkSession();
-
-        // Initialize theme - Default to light
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            setIsDarkMode(true);
-            document.documentElement.classList.add('dark');
-        } else {
-            setIsDarkMode(false);
-            document.documentElement.classList.remove('dark');
-        }
     }, []);
-
-    const toggleDarkMode = () => {
-        const newMode = !isDarkMode;
-        setIsDarkMode(newMode);
-        if (newMode) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    };
 
     const handleLogout = async () => {
         try {
@@ -93,7 +69,7 @@ export default function Header() {
                             <div className="absolute -inset-2 bg-gov-blue/5 rounded-full scale-0 group-hover:scale-100 transition-transform -z-10" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">National Hub</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Delhi CM Portal</span>
                             <span className="text-gov-blue text-xl font-black tracking-tighter leading-none">CivicOS</span>
                         </div>
                     </Link>
@@ -123,7 +99,7 @@ export default function Header() {
                         <div className="flex items-center gap-3">
                             <Link href="/dashboard" className="flex items-center gap-2 px-5 py-2.5 bg-gov-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:shadow-lg hover:shadow-gov-blue/20 transition-all">
                                 <HiOutlineViewGrid className="w-4 h-4" />
-                                Dash
+                                Dashboard
                             </Link>
                             <button 
                                 onClick={handleLogout}
@@ -138,7 +114,7 @@ export default function Header() {
                                 Sign In
                             </Link>
                             <Link href="/auth" className="px-6 py-2.5 bg-slate-900 border border-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gov-blue hover:border-gov-blue transition-all shadow-lg shadow-slate-200">
-                                Register
+                                Start
                             </Link>
                         </div>
                     )}
@@ -168,7 +144,7 @@ export default function Header() {
                     <div className="flex items-center gap-3">
                         <Image alt="CivicOS Logo" src="/logo1.png" width={36} height={36} className="object-contain" />
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Govt. of India</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Govt. of NCT Delhi</span>
                             <span className="text-gov-blue text-lg font-black tracking-tight">CivicOS</span>
                         </div>
                     </div>
@@ -227,7 +203,7 @@ export default function Header() {
                         </button>
                     )}
                     <p className="mt-8 text-center text-[10px] text-slate-300 font-black tracking-widest uppercase">
-                        Unified National Digital Infrastructure
+                        Govt. of NCT Delhi Grievance Infrastructure
                     </p>
                 </div>
             </div>

@@ -32,7 +32,8 @@ import {
     MapPin,
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
-import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import { getMyGrievancesPaginatedAction } from "@/app/actions/grievance";
 import { getComplaints, syncGrievances } from "@/lib/store";
 import { Complaint } from "@/lib/types";
@@ -112,9 +113,8 @@ function SidebarLink({ icon, label, href, active = false }: { icon: React.ReactN
     return (
         <Link
             href={href}
-            className={`flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
-                active ? "bg-gov-blue/5 text-gov-blue shadow-inner" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-            }`}
+            className={`flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${active ? "bg-gov-blue/5 text-gov-blue shadow-inner" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                }`}
         >
             <span className={active ? "text-gov-blue" : "text-slate-400"}>{icon}</span>
             {label}
@@ -239,15 +239,15 @@ export default function MyReportsPage() {
     // ── Filtered view (client-side, no cloud re-fetch) ──
     const filtered = searchTerm.trim()
         ? items.filter(c => {
-              const term = searchTerm.toLowerCase();
-              return (
-                  (c.id ?? "").toLowerCase().includes(term) ||
-                  (c.category ?? "").toLowerCase().includes(term) ||
-                  (c.ward ?? "").toLowerCase().includes(term) ||
-                  (c.description ?? "").toLowerCase().includes(term) ||
-                  (c.status ?? "").toLowerCase().includes(term)
-              );
-          })
+            const term = searchTerm.toLowerCase();
+            return (
+                (c.id ?? "").toLowerCase().includes(term) ||
+                (c.category ?? "").toLowerCase().includes(term) ||
+                (c.ward ?? "").toLowerCase().includes(term) ||
+                (c.description ?? "").toLowerCase().includes(term) ||
+                (c.status ?? "").toLowerCase().includes(term)
+            );
+        })
         : items;
 
     const handleLogout = async () => {
@@ -280,9 +280,8 @@ export default function MyReportsPage() {
 
             {/* ── Sidebar ── */}
             <aside
-                className={`w-64 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 lg:translate-x-0 ${
-                    showMobileSidebar ? "translate-x-0" : "-translate-x-full"
-                } lg:z-20`}
+                className={`w-64 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 lg:translate-x-0 ${showMobileSidebar ? "translate-x-0" : "-translate-x-full"
+                    } lg:z-20`}
             >
                 <div className="p-6 flex items-center justify-between border-b border-slate-50">
                     <div className="flex items-center gap-3">
@@ -290,8 +289,8 @@ export default function MyReportsPage() {
                             <Image src="/logo1.png" alt="MCD Logo" fill className="object-contain" sizes="40px" />
                         </div>
                         <div>
-                            <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of India</h1>
-                            <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">CivicOS National</p>
+                            <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of NCT Delhi</h1>
+                            <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">CM Grievance Dashboard</p>
                         </div>
                     </div>
                     <button
@@ -355,7 +354,7 @@ export default function MyReportsPage() {
                     <div className="flex-1" />
 
                     {/* User pill */}
-                    <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+                    {/* <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
                         <div className="w-8 h-8 rounded-xl overflow-hidden shadow bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0">
                             {userProfile?.profileImageUrl ? (
                                 <Image
@@ -375,7 +374,7 @@ export default function MyReportsPage() {
                         <p className="text-sm font-black text-slate-800 hidden sm:block leading-none truncate max-w-[120px]">
                             {userProfile?.name ?? "Citizen"}
                         </p>
-                    </div>
+                    </div> */}
                 </header>
 
                 {/* Page title + search */}
@@ -516,7 +515,7 @@ export default function MyReportsPage() {
                                             </td>
                                             <td className="px-5 py-5 text-right flex gap-2 justify-end">
                                                 {item.status === 'Resolved' && (
-                                                    <button 
+                                                    <button
                                                         onClick={() => setSelectedProof(item)}
                                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
                                                     >
@@ -586,7 +585,7 @@ export default function MyReportsPage() {
                                             <FileDown className="w-4 h-4" />
                                         </button>
                                         {item.status === 'Resolved' && (
-                                            <button 
+                                            <button
                                                 onClick={() => setSelectedProof(item)}
                                                 className="p-2 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-600 transition-colors flex items-center justify-center"
                                             >
@@ -685,7 +684,7 @@ export default function MyReportsPage() {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="mt-8 flex gap-3">
                                 <button className="flex-1 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2" onClick={() => setSelectedProof(null)}>
                                     <CheckCircle className="w-4 h-4" /> Yes, Fully Resolved

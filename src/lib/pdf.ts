@@ -19,12 +19,12 @@ export const generateGrievancePDF = async (complaint: Complaint) => {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(22);
     pdf.setFont("helvetica", "bold");
-    pdf.text("CivicOS - Receipt", 20, 20);
+    pdf.text("Delhi CM Grievance - Receipt", 20, 20);
     
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
-    pdf.text("CivicOS National Portal", 20, 28);
-    pdf.text("Digital Public Infrastructure", 20, 33);
+    pdf.text("Govt. of NCT Delhi", 20, 28);
+    pdf.text("CM Grievance Dashboard Service", 20, 33);
 
     // Body
     pdf.setTextColor(30, 41, 59); // Slate 800
@@ -78,8 +78,8 @@ export const generateGrievancePDF = async (complaint: Complaint) => {
     
     pdf.setFontSize(8);
     pdf.setTextColor(148, 163, 184);
-    pdf.text("This is an automatically generated receipt for your civic grievance submission through CivicOS.", 20, 278);
+    pdf.text("This is an automatically generated receipt for your civic grievance submission through Delhi CM Grievance Dashboard.", 20, 278);
     pdf.text(`Generated on: ${new Date().toLocaleString()}`, 20, 283);
 
-    pdf.save(`CivicOS-Receipt-${complaint.id}.pdf`);
+    pdf.save(`Delhi-CM-Grievance-Receipt-${complaint.id}.pdf`);
 };

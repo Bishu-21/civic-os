@@ -14,21 +14,21 @@ import TrackStatusModal from "./TrackStatusModal";
 
 export default function Hero() {
     const [description, setDescription] = useState("");
+    const [isMounted, setIsMounted] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [result, setResult] = useState<AnalysisResult | null>(null);
     const [ticketId, setTicketId] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string>('anonymous');
     const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
     const [aiFeedback, setAiFeedback] = useState<string | null>(null);
-    const [isMounted, setIsMounted] = useState(false);
     const router = useRouter();
 
     // Typing Simulation States
     const placeholders = useMemo(() => [
-        "Garbage overflow in Mumbai (Bandra). Categorizing: Sanitation. Priority: High. Assigned: BMC West.",
-        "Pothole on Outer Ring Road (Bengaluru). Categorizing: PWD. Priority: Critical. Assigned: BBMP Division.",
-        "Broken streetlight in Kolkata (Salt Lake). Categorizing: Electrical. Priority: Medium. Assigned: CESC/Local Body.",
-        "Water supply leakage in Rohini. Categorizing: Jal Board. Priority: High. Assigned: Water Management."
+        "Garbage overflow near Connaught Place. Categorizing: Sanitation. Priority: High.",
+        "Pothole on Ring Road near AIIMS. Categorizing: PWD. Priority: Critical.",
+        "Broken streetlight in Rohini Sector 7. Categorizing: Electrical. Priority: Medium.",
+        "Water leakage in Lajpat Nagar. Categorizing: Jal Board. Priority: High."
     ], []);
     
     const [placeholderIndex, setPlaceholderIndex] = useState(0);

@@ -44,7 +44,8 @@ import {
 } from "lucide-react";
 
 import { logoutAction } from "@/app/actions/auth";
-import { getServerProfileAction, UserProfile, updateUserProfileAction } from "@/app/actions/profile";
+import { getServerProfileAction, updateUserProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import { reverseGeocodeAction } from "@/app/actions/geo";
 import { getComplaints, updateComplaint, getStats, syncGrievances } from "@/lib/store";
 import { Complaint } from "@/lib/types";
@@ -70,7 +71,7 @@ export default function CitizenDashboard() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [activeZone, setActiveZone] = useState("All India");
+    const [activeZone, setActiveZone] = useState("Delhi NCT");
     const [aiInsight, setAiInsight] = useState<any>(null);
     const [showMandatoryUpdateModal, setShowMandatoryUpdateModal] = useState(false);
     const [nearbyResolutions, setNearbyResolutions] = useState<Complaint[]>([]);
@@ -293,8 +294,8 @@ export default function CitizenDashboard() {
                 let finalProfile = result.profile;
 
                 // Safety: Redirect officials to authority portal if they hit this page
-                if (finalProfile?.role === 'authority') {
-                    console.log("[DASHBOARD_CLIENT] Authority user detected on Citizen Dashboard. Redirecting...");
+                if (finalProfile?.role === 'authority' || finalProfile?.role === 'cm' || finalProfile?.role === 'team') {
+                    console.log("[DASHBOARD_CLIENT] Authority/Admin user detected on Citizen Dashboard. Redirecting...");
                     router.replace('/authority');
                     return;
                 }
@@ -415,7 +416,7 @@ export default function CitizenDashboard() {
         }
     }, [lat, lng, complaints]);
 
-    const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleUpdateProfile = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         if (!userProfile) return;
         
@@ -492,8 +493,8 @@ export default function CitizenDashboard() {
                             />
                         </div>
                         <div>
-                            <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of India</h1>
-                            <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">CivicOS National</p>
+                            <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of NCT Delhi</h1>
+                            <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">Delhi CM Grievance Dashboard</p>
                         </div>
                     </div>
                     <button 
@@ -570,7 +571,7 @@ export default function CitizenDashboard() {
                             
                             {showZoneMenu && (
                                 <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                                    {["All India", "North Zone", "South Zone", "East Zone", "West Zone", "Central Zone"].map((zone) => (
+                                    {["Delhi NCT", "North Delhi", "South Delhi", "East Delhi", "West Delhi", "Central Delhi"].map((zone) => (
                                         <button
                                             key={zone}
                                             onClick={() => {
@@ -978,7 +979,7 @@ export default function CitizenDashboard() {
                                             </td>
                                             <td className="px-4 py-6">
                                                 <p className="text-sm font-bold text-slate-800">{item.ward}</p>
-                                                <p className="text-[10px] text-slate-400 font-medium">National Jurisdiction</p>
+                                                <p className="text-[10px] text-slate-400 font-medium">Delhi NCT Jurisdiction</p>
                                             </td>
                                             <td className="px-4 py-6">
                                                 <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -1284,7 +1285,7 @@ function MandatoryProfileUpdateModal({ userProfile, onComplete }: { userProfile:
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         setError('');
         if (!name || !govIdNumber) {

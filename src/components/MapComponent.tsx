@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
+import React from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Complaint } from '@/lib/types';
-import { ShieldAlert, AlertCircle, CheckCircle, Navigation } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 
 // Fix Leaflet marker icon issues without using ReactDOMServer in client
 const createCustomIcon = (status: string) => {
@@ -71,7 +71,10 @@ export default function MapComponent({ grievances, userLocation, onTrackTicketAc
     const [isClient, setIsClient] = React.useState(false);
 
     React.useEffect(() => {
-        setIsClient(true);
+        const timer = setTimeout(() => {
+            setIsClient(true);
+        }, 0);
+        return () => clearTimeout(timer);
     }, []);
 
     if (!isClient) return null;

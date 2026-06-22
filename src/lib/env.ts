@@ -44,7 +44,10 @@ export const env = {
     // Security (Server Only)
     // Used to bypass rate limits and CORS during development (Dev Key) 
     // or for full administrative access (API Key)
-    APPWRITE_API_KEY: process.env.APPWRITE_API_KEY || ''
+    APPWRITE_API_KEY: process.env.APPWRITE_API_KEY || '',
+    
+    // Cron Jobs
+    CRON_SECRET: process.env.CRON_SECRET || ''
 };
 
 if (typeof window === 'undefined') {
