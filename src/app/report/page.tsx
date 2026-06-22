@@ -40,6 +40,20 @@ const MapComponent = dynamic(() => import("@/components/MapComponent"), {
     loading: () => <div className="w-full h-full bg-slate-50 animate-pulse rounded-3xl flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest">Map Loading...</div>
 });
 
+interface SubmitOverride {
+    lat?: number;
+    lng?: number;
+    locationText?: string;
+    aiResult?: {
+        category: ComplaintCategory;
+        priority: Priority;
+        department: string;
+        suggestedAction: string;
+        refinedDescription: string;
+    };
+    userId?: string;
+}
+
 export default function ReportPage() {
     const router = useRouter();
     const [step, setStep] = useState(1);
@@ -447,13 +461,13 @@ export default function ReportPage() {
         }
     };
 
-    const handleSubmit = async (arg?: React.FormEvent | React.MouseEvent | { lat?: number, lng?: number, locationText?: string, aiResult?: any, userId?: string }) => {
+    const handleSubmit = async (arg?: React.FormEvent | React.MouseEvent | SubmitOverride) => {
         if (isSubmitting) return;
 
-        // Distinguish between a UI event and an Autopilot override object
-        const overrides = (arg && !(arg as any).nativeEvent) ? (arg as any) : {};
+        const overrides = (arg && typeof arg === 'object' && !('nativeEvent' in arg))
+            ? (arg as SubmitOverride)
+            : {};
 
-        // Prioritize overrides over state for synchronous Autopilot calls
         const finalLat = overrides.lat ?? coords.lat;
         const finalLng = overrides.lng ?? coords.lng;
         const finalLocation = overrides.locationText ?? location;
@@ -461,6 +475,72 @@ export default function ReportPage() {
         const finalUserId = overrides.userId ?? userId;
 
         if (!finalUserId || !finalAiResult) return;
+        setIsSubmitting(true);
+
+        let photoId = "";
+
+        if (selectedFile) {
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+            const uploadRes = await uploadGrievanceImageAction(formData);
+            if (uploadRes.success && uploadRes.fileId) {
+                photoId = uploadRes.fileId;
+            }
+        }
+
+        const newTicketId = `CIV-${Math.floor(100000 + Math.random() * 900000)}`;
+
+        try {
+            const appwriteRes = await createGrievanceAction({
+                id: newTicketId,
+                description: finalAiResult.refinedDescription,
+                rawDescription: description,
+                category: finalAiResult.category,
+                priority: finalAiResult.priority,
+                department: finalAiResult.department,
+                lat: finalLat || 28.7041,
+                lng: finalLng || 77.1025,
+                status: 'Pending',
+                assignedTo: 'Processing',
+                ward: finalLocation.split(',')[0] || 'Delhi NCT Zone',
+                userId: finalUserId,
+                citizenPhoto: photoId
+            });
+
+            if (!appwriteRes.success) {
+                console.error("Appwrite Submission Failed:", appwriteRes.error);
+                setSubmitError(`Database Sync Failed: ${appwriteRes.error}. Please check your Appwrite collection attributes.`);
+                setIsSubmitting(false);
+                return;
+            }
+
+            await saveComplaint({
+                id: newTicketId,
+                description: finalAiResult.refinedDescription,
+                category: finalAiResult.category,
+                priority: finalAiResult.priority,
+                department: finalAiResult.department,
+                lat: finalLat || 28.7041,
+                lng: finalLng || 77.1025,
+                status: 'Pending',
+                assignedTo: 'Processing',
+                createdAt: new Date().toISOString(),
+                ward: finalLocation.split(',')[0] || 'Delhi NCT Zone',
+                userId: finalUserId,
+                citizenPhoto: photoId
+            });
+
+            setTicketId(newTicketId);
+            setStep(3);
+            if (autopilotMode) setAutopilotState('success');
+        } catch (err) {
+            console.error("Submission failed:", err);
+            if (autopilotMode) setAutopilotState('error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const startCamera = async () => {
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({ 
@@ -469,7 +549,6 @@ export default function ReportPage() {
             });
             setStream(mediaStream);
             setIsCameraActive(true);
-            // videoRef binding is now handled by useEffect below
         } catch (err) {
             console.error("Camera access denied:", err);
             alert("Camera access denied. Please check permissions.");
@@ -494,88 +573,16 @@ export default function ReportPage() {
                 ctx.drawImage(videoRef.current, 0, 0);
                 const dataUrl = canvas.toDataURL("image/jpeg");
                 setImagePreview(dataUrl);
-                
-                // Convert to File object
+
                 fetch(dataUrl)
                     .then(res => res.blob())
                     .then(blob => {
                         const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
                         setSelectedFile(file);
                     });
-                
+
                 stopCamera();
             }
-        }
-    };
-
-    const handleSubmit = async () => {
-        if (!userId || !aiResult) return;
-        setIsSubmitting(true);
-        
-        let photoId = "";
-        
-        // 1. Upload Photo if selected
-        if (selectedFile) {
-            const formData = new FormData();
-            formData.append('image', selectedFile);
-            const uploadRes = await uploadGrievanceImageAction(formData);
-            if (uploadRes.success && uploadRes.fileId) {
-                photoId = uploadRes.fileId;
-            }
-        }
-
-        const newTicketId = `CIV-${Math.floor(100000 + Math.random() * 900000)}`;
-        
-        try {
-            // 2. Save to Appwrite
-            const appwriteRes = await createGrievanceAction({
-                id: newTicketId,
-                description: finalAiResult.refinedDescription, 
-                rawDescription: description, 
-                category: finalAiResult.category,
-                priority: finalAiResult.priority,
-                department: finalAiResult.department,
-                lat: finalLat,
-                lng: finalLng,
-                status: 'Pending',
-                assignedTo: 'Processing',
-                ward: finalLocation.split(',')[0] || 'National Zone',
-                userId: finalUserId,
-                citizenPhoto: photoId
-            });
-
-            if (!appwriteRes.success) {
-                console.error("Appwrite Submission Failed:", appwriteRes.error);
-                setSubmitError(`Database Sync Failed: ${appwriteRes.error}. Please check your Appwrite collection attributes.`);
-                setIsSubmitting(false);
-                return;
-            }
-
-            // 3. Fallback/Sync to local storage for existing dashboard components
-            await saveComplaint({
-                id: newTicketId,
-                description: finalAiResult.refinedDescription, 
-                category: finalAiResult.category,
-                priority: finalAiResult.priority,
-                department: finalAiResult.department,
-                lat: finalLat,
-                lng: finalLng,
-                status: 'Pending',
-                assignedTo: 'Processing',
-                createdAt: new Date().toISOString(),
-                ward: finalLocation.split(',')[0] || 'National Zone',
-                userId: finalUserId,
-                citizenPhoto: photoId
-            });
-
-            setTicketId(newTicketId);
-            setStep(3);
-            if (autopilotMode) setAutopilotState('success');
-        } catch (err) {
-            console.error("Submission failed:", err);
-            if (autopilotMode) setAutopilotState('error');
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
