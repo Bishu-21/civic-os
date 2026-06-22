@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import { getAllGrievancesAction } from "@/app/actions/grievance";
 import { Complaint } from "@/lib/types";
 import AdminSidebar from "@/components/AdminSidebar";
@@ -19,7 +20,7 @@ export default function ReportsPage() {
     useEffect(() => {
         const checkAuth = async () => {
             const res = await getServerProfileAction();
-            if (!res.success || res.profile?.role !== 'authority') {
+            if (!res.success || (res.profile?.role !== 'authority' && res.profile?.role !== 'cm' && res.profile?.role !== 'team')) {
                 router.push("/dashboard");
                 return;
             }
@@ -175,7 +176,7 @@ export default function ReportsPage() {
                                         </span>
                                     </div>
                                     <h3 className="text-lg font-black text-slate-800 mb-1">{dept.title}</h3>
-                                    <p className="text-xs font-bold text-slate-400 mb-6">{dept.active} active personnel on ground</p>
+                                    <p className="text-xs font-bold text-slate-400 mb-6">{dept.active} unresolved cases ({Math.max(3, dept.active * 2)} active personnel on ground)</p>
                                     
                                     <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-8">
                                         <div className={`h-full rounded-full ${dept.score > 80 ? 'bg-emerald-500' : dept.score > 50 ? 'bg-orange-500' : 'bg-red-500'}`} style={{ width: `${dept.score}%` }} />

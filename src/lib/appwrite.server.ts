@@ -1,5 +1,5 @@
 import 'server-only';
-import { Client, Account, Databases, Storage, ID } from 'node-appwrite';
+import { Client, Account, Databases, Storage, ID, TablesDB } from 'node-appwrite';
 import { env } from './env';
 import { cookies } from 'next/headers';
 
@@ -50,48 +50,7 @@ export function createAppwriteClient(sessionSecret?: string) {
     }
 
     const databases = new Databases(client);
-
-    const tablesDB = {
-        getRow: async (params: { databaseId: string, tableId: string, rowId: string }) => {
-            return await databases.getDocument({
-                databaseId: params.databaseId,
-                collectionId: params.tableId,
-                documentId: params.rowId
-            });
-        },
-        createRow: async (params: { databaseId: string, tableId: string, rowId?: string, data: any, permissions?: string[] }) => {
-            return await databases.createDocument({
-                databaseId: params.databaseId,
-                collectionId: params.tableId,
-                documentId: params.rowId || ID.unique(),
-                data: params.data,
-                permissions: params.permissions
-            });
-        },
-        updateRow: async (params: { databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[] }) => {
-            return await databases.updateDocument({
-                databaseId: params.databaseId,
-                collectionId: params.tableId,
-                documentId: params.rowId,
-                data: params.data,
-                permissions: params.permissions
-            });
-        },
-        deleteRow: async (params: { databaseId: string, tableId: string, rowId: string }) => {
-            return await databases.deleteDocument({
-                databaseId: params.databaseId,
-                collectionId: params.tableId,
-                documentId: params.rowId
-            });
-        },
-        listRows: async (params: { databaseId: string, tableId: string, queries?: string[] }) => {
-            return await databases.listDocuments({
-                databaseId: params.databaseId,
-                collectionId: params.tableId,
-                queries: params.queries
-            });
-        }
-    };
+    const tablesDB = new TablesDB(client);
 
     return {
         get account() { return new Account(client); },

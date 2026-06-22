@@ -47,3 +47,14 @@ export interface AnalysisResult {
     department: string;
     refinedDescription?: string;
 }
+
+export interface UserProfile {
+    userId: string;
+    name: string;
+    govIdType: string;
+    govIdNumber: string;
+    profileImageUrl?: string;
+    email?: string;
+    address?: string;
+    role: 'citizen' | 'authority' | 'cm' | 'team';
+}

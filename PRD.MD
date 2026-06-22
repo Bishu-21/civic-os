@@ -1,7 +1,7 @@
-# Product Requirements Document (PRD) - CivicOS
+# Product Requirements Document (PRD) - Delhi CM Grievance Dashboard
 
 ## 1. Executive Summary
-CivicOS is a unified national platform for citizen grievance reporting and resolution tracking. Transitioning from a regional (Delhi) focus to a national scope, it leverages AI and spatial intelligence to bridge the gap between citizens and government administration, ensuring a cleaner, smarter India.
+Delhi CM Grievance Dashboard is a unified platform for citizen grievance reporting and resolution tracking. Tailored for Delhi districts / wards / departments, it leverages AI and spatial intelligence to bridge the gap between citizens and government administration, ensuring a cleaner, smarter Delhi.
 
 ---
 
@@ -79,7 +79,7 @@ The MVP focus is on **"One-Touch Stability"**:
 ## 7. Key Features
 - **Intelligent Refinement**: AI automatically translates and summarizes multi-lingual reports into professional English.
 - **Spatial Command Center**: Real-time map pointers with category-specific icons (Streetlight, Garbage, etc.).
-- **Mobile-First Design**: Fully responsive across iPhones, Androids, and tablets nationwide.
+- **Mobile-First Design**: Fully responsive across iPhones, Androids, and tablets across Delhi NCT.
 - **Voice Assist**: Citizens can report grievances via voice for enhanced accessibility.
 - **Grievance Export**: Authorized analysis via CSV export of map data.
 
@@ -94,5 +94,5 @@ The MVP focus is on **"One-Touch Stability"**:
 
 ### Pain Points:
 - **Redirection Loops**: Solved via refined `initDashboard` logic and serialization sanitization.
-- **Delhi-Centric Limitation**: Broadened to a National Scope (Govt. of India branding).
+- **Delhi-Centric Limitation**: Refined to Delhi CM Office / Govt. of NCT Delhi language and tailored for Delhi districts / wards / departments.
 - **Service Interruptions**: The new "Compliance Banner" ensures missing legal data is collected without breaking the user experience.

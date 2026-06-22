@@ -53,7 +53,7 @@ export default function AdminSidebar({ userProfile, onLogoutAction, isOpen, onCl
                         />
                     </div>
                     <div>
-                        <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of India</h1>
+                        <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of NCT Delhi</h1>
                         <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">Authority Portal</p>
                     </div>
                 </div>
@@ -111,7 +111,7 @@ export default function AdminSidebar({ userProfile, onLogoutAction, isOpen, onCl
                     <div className="flex flex-col overflow-hidden">
                         <span className="text-xs font-black text-slate-800 truncate">{userProfile?.name || "Official"}</span>
                         <span className="text-[10px] text-gov-blue font-black uppercase tracking-tight opacity-70">
-                            {userProfile?.role === 'authority' ? 'Commissioner' : 'Officer'}
+                            {userProfile?.role === 'cm' ? 'Chief Minister' : userProfile?.role === 'team' ? 'CMO Team Member' : userProfile?.role === 'authority' ? 'Department Official' : 'Officer'}
                         </span>
                     </div>
                 </div>

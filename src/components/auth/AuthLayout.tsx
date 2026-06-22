@@ -15,7 +15,7 @@ interface AuthLayoutProps {
 const CAPABILITIES = [
     {
         title: "Secure AI Identity",
-        desc: "India Stack integrated verification for total security and privacy.",
+        desc: "State-of-the-art authentication verification for total security and privacy.",
         icon: Shield,
         color: "from-emerald-400 to-teal-500"
     },
@@ -27,7 +27,7 @@ const CAPABILITIES = [
     },
     {
         title: "DPDP Compliant",
-        desc: "National data protection standards ensuring citizen privacy at every node.",
+        desc: "Compliant data protection standards ensuring citizen privacy at every node.",
         icon: Lock,
         color: "from-amber-400 to-orange-500"
     }
@@ -60,7 +60,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
                     </div>
                     <div className="flex flex-col">
                         <span className="text-lg md:text-xl font-black text-slate-800 tracking-tight leading-none">CivicOS</span>
-                        <span className="text-[10px] font-bold text-gov-blue uppercase tracking-widest mt-0.5">National Infrastructure</span>
+                        <span className="text-[10px] font-bold text-gov-blue uppercase tracking-widest mt-0.5">Delhi CM Portal</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-6">
@@ -86,9 +86,9 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
                         >
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-400 text-[10px] font-black uppercase tracking-widest mb-2">
                                 <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />
-                                Official National Gateway
+                                Official CMO Delhi Gateway
                             </div>
-                            <h2 className="text-5xl font-black text-white leading-[1.1] tracking-tighter">Empowering a Smarter, Faster Nation.</h2>
+                            <h2 className="text-5xl font-black text-white leading-[1.1] tracking-tighter">Empowering NCT Delhi with Rapid Grievance Resolution.</h2>
                         </motion.div>
 
                         <div className="relative h-[240px] perspective-1000">
@@ -167,7 +167,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
                                         {[
                                             { label: "Instant Access", icon: RefreshCw },
                                             { label: "No Passwords", icon: Lock },
-                                            { label: "India Stack", icon: Shield }
+                                            { label: "Delhi Stack", icon: Shield }
                                         ].map((item, i) => (
                                             <div key={i} className="flex items-center gap-1.5 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all cursor-default group">
                                                 <item.icon className="w-3 h-3 group-hover:text-gov-blue" />
@@ -179,7 +179,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
                             
                             <div className="mt-10 text-center space-y-2 group">
                                 <p className="text-[10px] text-slate-300 font-black uppercase tracking-[0.25em] transition-colors group-hover:text-slate-400">
-                                    National Data Gateway • Powered by India Stack
+                                    Govt. of NCT Delhi Portal • CM Grievance System
                                 </p>
                                 <div className="h-0.5 w-8 bg-slate-200 mx-auto transition-all group-hover:w-16" />
                             </div>

@@ -8,22 +8,22 @@ export default function TrustBlock() {
     const pillars = [
         {
             icon: HiBadgeCheck,
-            title: "AI-Powered Triage",
-            desc: "Automated classification and priority assessment for rapid response.",
+            title: "Clear Intake",
+            desc: "Complaint details are captured once, cleaned, and routed without extra user confusion.",
             color: "text-green-600",
             bg: "bg-green-50"
         },
         {
             icon: HiStatusOnline,
-            title: "Direct Governance",
-            desc: "Immediate routing into Local Municipal and Zonal Authority task queues.",
+            title: "Department Routing",
+            desc: "Each grievance is mapped to the right department, ward, and officer queue.",
             color: "text-gov-blue",
             bg: "bg-blue-50"
         },
         {
             icon: HiShieldCheck,
-            title: "Public Accountability",
-            desc: "Transparent resolution lifecycle with immutable audit trails.",
+            title: "Audit Trail",
+            desc: "Status changes, SLA breaches, and resolution proof remain visible to reviewers.",
             color: "text-primary",
             bg: "bg-primary/5"
         }
@@ -34,7 +34,7 @@ export default function TrustBlock() {
             <div className="container mx-auto px-4 md:px-10 lg:px-20">
                 <div className="text-center mb-16 space-y-4">
                     <h2 className="text-gov-blue text-xs font-black uppercase tracking-[0.3em]">Core Commitments</h2>
-                    <p className="text-slate-900 text-3xl md:text-4xl font-[950] tracking-tight">Accountability & Fast Resolution</p>
+                    <p className="text-slate-900 text-3xl md:text-4xl font-[950] tracking-tight">Simple for citizens, usable for officials</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -64,8 +64,8 @@ export default function TrustBlock() {
                             <div className="absolute inset-0 bg-gov-blue/5" />
                             <Image src={`/logo1.png`} alt="MCD Official" width={36} height={36} className="object-cover p-1.5" />
                         </div>
-                        <p className="text-xs font-black text-slate-800 uppercase tracking-widest"> 
-                            Official Digital Public Infrastructure 
+                            <p className="text-xs font-black text-slate-800 uppercase tracking-widest"> 
+                            Delhi CM grievance workflow prototype
                         </p>
                     </div>
                 </div>

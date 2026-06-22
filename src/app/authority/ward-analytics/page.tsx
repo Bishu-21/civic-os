@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import { getAllGrievancesAction } from "@/app/actions/grievance";
 import { Complaint } from "@/lib/types";
 import AdminSidebar from "@/components/AdminSidebar";
@@ -21,7 +22,7 @@ export default function WardAnalyticsPage() {
     useEffect(() => {
         const checkAuth = async () => {
             const res = await getServerProfileAction();
-            if (!res.success || res.profile?.role !== 'authority') {
+            if (!res.success || (res.profile?.role !== 'authority' && res.profile?.role !== 'cm' && res.profile?.role !== 'team')) {
                 router.push("/dashboard");
                 return;
             }

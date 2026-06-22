@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { logoutAction } from "@/app/actions/auth";
-import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import { reverseGeocodeAction } from "@/app/actions/geo";
 import { fetchNearestServices, fetchRouteOSRM, generateDynamicIncidents } from "@/lib/emergencyUtils";
 
@@ -45,7 +46,7 @@ export default function EmergencyPage() {
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [activeZone, setActiveZone] = useState("All India");
+    const [activeZone, setActiveZone] = useState("Delhi NCT");
     const [searchTerm, setSearchTerm] = useState("");
     const [showZoneMenu, setShowZoneMenu] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -171,8 +172,8 @@ export default function EmergencyPage() {
                             />
                         </div>
                         <div>
-                            <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of India</h1>
-                            <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">CivicOS National</p>
+                            <h1 className="text-sm font-black text-slate-800 leading-none">Govt. of NCT Delhi</h1>
+                            <p className="text-[10px] text-gov-blue font-black mt-1 uppercase tracking-widest">CM Grievance Dashboard</p>
                         </div>
                     </div>
                 </div>
@@ -258,7 +259,7 @@ export default function EmergencyPage() {
                             
                             {showZoneMenu && (
                                 <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                                    {["All India", "North Zone", "South Zone", "East Zone", "West Zone", "Central Zone"].map((zone) => (
+                                    {["Delhi NCT", "North Delhi", "South Delhi", "East Delhi", "West Delhi", "Central Delhi"].map((zone) => (
                                         <button
                                             key={zone}
                                             onClick={() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { 
@@ -32,7 +32,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getAllGrievancesAction, createGrievanceAction } from "@/app/actions/grievance";
-import { getServerProfileAction, updateUserProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction, updateUserProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import { logoutAction } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 import { syncGrievances, getComplaints, getStats, generateDemoData } from "@/lib/store";
@@ -40,7 +41,7 @@ import { reverseGeocodeAction } from "@/app/actions/geo";
 import MapSidebar from "@/components/map/MapSidebar";
 import MobileMapDrawer from "@/components/map/MobileMapDrawer";
 import MapInfoCard from "@/components/map/MapInfoCard";
-import { Complaint } from "@/lib/types";
+import { Complaint, ComplaintCategory } from "@/lib/types";
 import BottomNav from "@/components/BottomNav";
 
 // Dynamic import for Leaflet map to avoid SSR errors
@@ -79,12 +80,11 @@ interface RawComplaintDoc {
 export default function MapPage() {
     const router = useRouter();
     const [grievances, setGrievances] = useState<Complaint[]>([]);
-    const [filteredGrievances, setFilteredGrievances] = useState<Complaint[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(true);
-    const [activeZone, setActiveZone] = useState("All India");
+    const [activeZone, setActiveZone] = useState("Delhi NCT");
     const [currentAddress, setCurrentAddress] = useState<string | null>(null);
 
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -134,7 +134,7 @@ export default function MapPage() {
                 const profileRes = await getServerProfileAction();
                 let finalProfile = profileRes.profile;
 
-                if (profileRes.success && (!finalProfile || (finalProfile as any).name?.includes('Bridge'))) {
+                if (profileRes.success && (!finalProfile || finalProfile.name?.includes('Bridge'))) {
                     try {
                         const { account: browserAccount, tablesDB: browserTables, DATABASE_ID, PROFILES_COLLECTION_ID } = await import('@/lib/appwrite');
                         const { Query } = await import('appwrite');
@@ -145,24 +145,23 @@ export default function MapPage() {
                             queries: [Query.equal('userId', browserUser.$id)]
                         });
                         if (dbResult.rows.length > 0) {
-                            finalProfile = JSON.parse(JSON.stringify(dbResult.rows[0]));
+                            finalProfile = JSON.parse(JSON.stringify(dbResult.rows[0])) as UserProfile;
                         }
-                    } catch (e) { console.warn("Map Profile Recovery failed"); }
+                    } catch { console.warn("Map Profile Recovery failed"); }
                 }
 
                 if (finalProfile) {
-                    setUserProfile(finalProfile as UserProfile);
+                    setUserProfile(finalProfile);
                     const cachedData = getComplaints();
                     const normalized = cachedData.map(g => {
-                        let category = g.category;
-                        if ((category as any) === 'Garbage Collection') category = 'Garbage' as any;
-                        if ((category as any) === 'Street Light') category = 'Streetlight' as any;
-                        if ((category as any) === 'Road Repair') category = 'Road Damage' as any;
-                        return { ...g, category } as Complaint;
+                        let category: string = g.category;
+                        if (category === 'Garbage Collection') category = 'Garbage';
+                        if (category === 'Street Light') category = 'Streetlight';
+                        if (category === 'Road Repair') category = 'Road Damage';
+                        return { ...g, category: category as ComplaintCategory } as Complaint;
                     });
                     if (normalized.length > 0) {
                         setGrievances(normalized);
-                        setFilteredGrievances(normalized);
                         setIsLoading(false);
                     }
                 } else {
@@ -172,41 +171,63 @@ export default function MapPage() {
 
                 const fetchAndSync = async () => {
                     try {
-                        const localComplaints = getComplaints((finalProfile as UserProfile).userId);
-                        const rawData = localComplaints.map(g => {
-                            let category = g.category;
-                            if ((category as any) === 'Garbage Collection') category = 'Garbage' as any;
-                            if ((category as any) === 'Street Light') category = 'Streetlight' as any;
-                            if ((category as any) === 'Road Repair') category = 'Road Damage' as any;
-                            return { ...g, category } as Complaint;
-                        });
-                        setGrievances(rawData);
-                        setFilteredGrievances(rawData);
-                        setIsLoading(false);
-
+                        console.log("[MAP_CLIENT] Querying cloud for grievances...");
                         const grievancesRes = await getAllGrievancesAction();
                         let cloudGrievances: Complaint[] = [];
+                        let cloudSuccess = false;
+
                         if (grievancesRes.success && grievancesRes.grievances) {
-                            cloudGrievances = (grievancesRes.grievances as any[]).map((doc: any) => ({
-                                id: doc.$id || doc.id,
-                                userId: doc.userId,
-                                description: doc.description,
-                                category: doc.category,
-                                priority: doc.priority,
-                                department: doc.department,
-                                ward: doc.ward,
-                                lat: doc.lat,
-                                lng: doc.lng,
-                                status: doc.status || 'Pending',
-                                assignedTo: doc.assignedTo,
-                                createdAt: doc.createdAt || doc.$createdAt,
-                                citizenPhoto: doc.citizenPhoto,
-                                repairPhoto: doc.repairPhoto
-                            } as Complaint));
+                            const rawDocs = grievancesRes.grievances as Complaint[];
+                            cloudGrievances = rawDocs.map((doc) => {
+                                let category: string = doc.category;
+                                if (category === 'Garbage Collection') category = 'Garbage';
+                                if (category === 'Street Light') category = 'Streetlight';
+                                if (category === 'Road Repair') category = 'Road Damage';
+                                return {
+                                    id: doc.id,
+                                    userId: doc.userId,
+                                    description: doc.description,
+                                    category: category as ComplaintCategory,
+                                    priority: doc.priority,
+                                    department: doc.department,
+                                    ward: doc.ward,
+                                    lat: doc.lat,
+                                    lng: doc.lng,
+                                    status: doc.status || 'Pending',
+                                    assignedTo: doc.assignedTo,
+                                    createdAt: doc.createdAt,
+                                    citizenPhoto: doc.citizenPhoto,
+                                    repairPhoto: doc.repairPhoto
+                                } as Complaint;
+                            });
+                            setGrievances(cloudGrievances);
+                            setIsLoading(false);
                             syncGrievances(cloudGrievances, (finalProfile as UserProfile).userId);
+                            cloudSuccess = true;
                         }
 
-                        // SYNC: Push local-only grievances to cloud
+                        if (!cloudSuccess) {
+                            console.log("[MAP_CLIENT] Cloud fetch failed/empty, loading from local cache...");
+                            const localComplaints = getComplaints((finalProfile as UserProfile).userId);
+                            const rawData = localComplaints.map(g => {
+                                let category: string = g.category;
+                                if (category === 'Garbage Collection') category = 'Garbage';
+                                if (category === 'Street Light') category = 'Streetlight';
+                                if (category === 'Road Repair') category = 'Road Damage';
+                                return { ...g, category: category as ComplaintCategory } as Complaint;
+                            });
+                            setGrievances(rawData);
+                            setIsLoading(false);
+
+                            if (rawData.length === 0) {
+                                generateDemoData();
+                                const demoData = getComplaints() as unknown as Complaint[];
+                                setGrievances(demoData);
+                            }
+                        }
+
+                        // Background sync local-only items (if any exist)
+                        const localComplaints = getComplaints((finalProfile as UserProfile).userId);
                         const unsynced = localComplaints.filter(lc => 
                             lc.userId !== 'demo-user' && 
                             !cloudGrievances.find(cg => cg.id === lc.id)
@@ -214,33 +235,46 @@ export default function MapPage() {
 
                         if (unsynced.length > 0) {
                             console.log(`[MAP_SYNC] Found ${unsynced.length} unsynced. Pushing...`);
-                            Promise.all(unsynced.map(async (g) => {
+                            await Promise.all(unsynced.map(async (g) => {
                                 try {
                                     await createGrievanceAction(g);
                                 } catch (err) { console.error("Sync failed for", g.id, err); }
-                            })).then(async () => {
-                                const refreshRes = await getAllGrievancesAction();
-                                if (refreshRes.success && refreshRes.grievances) {
-                                    syncGrievances(refreshRes.grievances, (finalProfile as UserProfile).userId);
-                                    const rawData = getComplaints().map(g => {
-                                        let category = g.category;
-                                        if ((category as any) === 'Garbage Collection') category = 'Garbage' as any;
-                                        if ((category as any) === 'Street Light') category = 'Streetlight' as any;
-                                        if ((category as any) === 'Road Repair') category = 'Road Damage' as any;
-                                        return { ...g, category } as Complaint;
-                                    });
-                                    setGrievances(rawData);
-                                }
-                            });
-                        }
+                            }));
 
-                        if (rawData.length === 0 && !grievancesRes.success) {
-                            generateDemoData();
-                            const demoData = getComplaints() as unknown as Complaint[];
-                            setGrievances(demoData);
+                            const refreshRes = await getAllGrievancesAction();
+                            if (refreshRes.success && refreshRes.grievances) {
+                                const rawDocs = refreshRes.grievances as Complaint[];
+                                const refreshedGrievances = rawDocs.map((doc) => {
+                                    let category: string = doc.category;
+                                    if (category === 'Garbage Collection') category = 'Garbage';
+                                    if (category === 'Street Light') category = 'Streetlight';
+                                    if (category === 'Road Repair') category = 'Road Damage';
+                                    return {
+                                        id: doc.id,
+                                        userId: doc.userId,
+                                        description: doc.description,
+                                        category: category as ComplaintCategory,
+                                        priority: doc.priority,
+                                        department: doc.department,
+                                        ward: doc.ward,
+                                        lat: doc.lat,
+                                        lng: doc.lng,
+                                        status: doc.status || 'Pending',
+                                        assignedTo: doc.assignedTo,
+                                        createdAt: doc.createdAt,
+                                        citizenPhoto: doc.citizenPhoto,
+                                        repairPhoto: doc.repairPhoto
+                                    } as Complaint;
+                                });
+                                syncGrievances(refreshedGrievances, (finalProfile as UserProfile).userId);
+                                setGrievances(refreshedGrievances);
+                            }
                         }
-                    } catch (e) { console.warn("Global Background Sync failed:", e); }
-                    finally { setIsLoading(false); }
+                    } catch (e) { 
+                        console.warn("Global Background Sync failed:", e); 
+                    } finally { 
+                        setIsLoading(false); 
+                    }
                 };
                 
                 fetchAndSync();
@@ -252,7 +286,7 @@ export default function MapPage() {
         init();
     }, [router]);
 
-    const handleUpdateProfile = async (e: React.FormEvent) => {
+    const handleUpdateProfile = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         if (!userProfile) return;
         setIsUpdatingProfile(true);
@@ -276,15 +310,14 @@ export default function MapPage() {
         } catch (error) { console.error('Logout failed'); }
     };
 
-    useEffect(() => {
-        const filtered = grievances.filter(g => {
+    const filteredGrievances = useMemo(() => {
+        return grievances.filter(g => {
             const matchesSearch = g.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                  g.category.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(g.category);
             const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(g.status);
             return matchesSearch && matchesCategory && matchesStatus;
         });
-        setFilteredGrievances(filtered);
     }, [searchTerm, selectedCategories, selectedStatuses, grievances]);
 
     const handleMyLocation = () => {
@@ -377,9 +410,9 @@ export default function MapPage() {
 
                 {/* Mobile Centered Title */}
                 <div className="flex-1 flex flex-col items-center justify-center lg:hidden">
-                    <span className="text-[9px] font-black text-gov-blue/40 uppercase tracking-[0.2em] mb-0.5">CivicOS Spatial</span>
+                    <span className="text-[9px] font-black text-gov-blue/40 uppercase tracking-[0.2em] mb-0.5">Delhi CM Grievance</span>
                     <button className="flex items-center gap-1.5 group">
-                        <span className="text-sm font-black text-slate-800 tracking-tight">NATIONAL VIEW</span>
+                        <span className="text-sm font-black text-slate-800 tracking-tight">DELHI NCT VIEW</span>
                         <ChevronDown className="w-3.5 h-3.5 text-gov-blue group-hover:translate-y-0.5 transition-transform" />
                     </button>
                 </div>

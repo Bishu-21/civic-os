@@ -40,6 +40,27 @@ const MapComponent = dynamic(() => import("@/components/MapComponent"), {
     loading: () => <div className="w-full h-full bg-slate-50 animate-pulse rounded-3xl flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest">Map Loading...</div>
 });
 
+interface AutocompleteSuggestion {
+    formatted: string;
+    lat: number;
+    lon: number;
+    address?: string;
+}
+
+interface SubmitOverride {
+    lat?: number;
+    lng?: number;
+    locationText?: string;
+    aiResult?: {
+        category: ComplaintCategory;
+        priority: Priority;
+        department: string;
+        suggestedAction: string;
+        refinedDescription: string;
+    };
+    userId?: string;
+}
+
 export default function ReportPage() {
     const router = useRouter();
     const [step, setStep] = useState(1);
@@ -59,7 +80,7 @@ export default function ReportPage() {
     const [isDetecting, setIsDetecting] = useState(false);
     
     // Autocomplete State
-    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
     const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
     const [isLocationSelected, setIsLocationSelected] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -405,8 +426,10 @@ export default function ReportPage() {
     // Handle autocomplete fetching
     useEffect(() => {
         if (!location || location.length < 3 || isLocationSelected) {
-            setSuggestions([]);
-            return;
+            const clearTimer = setTimeout(() => {
+                setSuggestions([]);
+            }, 0);
+            return () => clearTimeout(clearTimer);
         }
 
         const timer = setTimeout(async () => {
@@ -414,7 +437,7 @@ export default function ReportPage() {
             try {
                 const res = await getAutocompleteSuggestionsAction(location);
                 if (res.success) {
-                    setSuggestions(res.suggestions);
+                    setSuggestions(res.suggestions as AutocompleteSuggestion[]);
                     setShowSuggestions(true);
                 }
             } catch (err) {
@@ -427,7 +450,7 @@ export default function ReportPage() {
         return () => clearTimeout(timer);
     }, [location, isLocationSelected]);
 
-    const handleSelectSuggestion = (suggestion: any) => {
+    const handleSelectSuggestion = (suggestion: AutocompleteSuggestion) => {
         setLocation(suggestion.formatted);
         setCoords({ lat: suggestion.lat, lng: suggestion.lon });
         setIsLocationSelected(true);
@@ -469,7 +492,6 @@ export default function ReportPage() {
             });
             setStream(mediaStream);
             setIsCameraActive(true);
-            // videoRef binding is now handled by useEffect below
         } catch (err) {
             console.error("Camera access denied:", err);
             alert("Camera access denied. Please check permissions.");
@@ -495,21 +517,34 @@ export default function ReportPage() {
                 const dataUrl = canvas.toDataURL("image/jpeg");
                 setImagePreview(dataUrl);
                 
-                // Convert to File object
                 fetch(dataUrl)
                     .then(res => res.blob())
                     .then(blob => {
                         const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
                         setSelectedFile(file);
                     });
-                
+
                 stopCamera();
             }
         }
     };
 
-    const handleSubmit = async () => {
-        if (!userId || !aiResult) return;
+    const handleSubmit = async (arg?: React.SyntheticEvent | React.MouseEvent | SubmitOverride) => {
+        if (isSubmitting) return;
+
+        // Distinguish between a UI event and an Autopilot override object
+        const overrides = (arg && typeof arg === 'object' && !('nativeEvent' in arg)) 
+            ? (arg as SubmitOverride) 
+            : {};
+
+        // Prioritize overrides over state for synchronous Autopilot calls
+        const finalLat = overrides.lat ?? coords.lat;
+        const finalLng = overrides.lng ?? coords.lng;
+        const finalLocation = overrides.locationText ?? location;
+        const finalAiResult = overrides.aiResult ?? aiResult;
+        const finalUserId = overrides.userId ?? userId;
+
+        if (!finalUserId || !finalAiResult) return;
         setIsSubmitting(true);
         
         let photoId = "";
@@ -530,16 +565,16 @@ export default function ReportPage() {
             // 2. Save to Appwrite
             const appwriteRes = await createGrievanceAction({
                 id: newTicketId,
-                description: finalAiResult.refinedDescription, 
-                rawDescription: description, 
+                description: finalAiResult.refinedDescription, // Use sanitized English version
+                rawDescription: description, // Optionally store raw input for audit
                 category: finalAiResult.category,
                 priority: finalAiResult.priority,
                 department: finalAiResult.department,
-                lat: finalLat,
-                lng: finalLng,
+                lat: finalLat || 28.7041,
+                lng: finalLng || 77.1025,
                 status: 'Pending',
                 assignedTo: 'Processing',
-                ward: finalLocation.split(',')[0] || 'National Zone',
+                ward: finalLocation.split(',')[0] || 'Delhi NCT Zone',
                 userId: finalUserId,
                 citizenPhoto: photoId
             });
@@ -554,16 +589,16 @@ export default function ReportPage() {
             // 3. Fallback/Sync to local storage for existing dashboard components
             await saveComplaint({
                 id: newTicketId,
-                description: finalAiResult.refinedDescription, 
+                description: finalAiResult.refinedDescription, // Use sanitized English version
                 category: finalAiResult.category,
                 priority: finalAiResult.priority,
                 department: finalAiResult.department,
-                lat: finalLat,
-                lng: finalLng,
+                lat: finalLat || 28.7041,
+                lng: finalLng || 77.1025,
                 status: 'Pending',
                 assignedTo: 'Processing',
                 createdAt: new Date().toISOString(),
-                ward: finalLocation.split(',')[0] || 'National Zone',
+                ward: finalLocation.split(',')[0] || 'Delhi NCT Zone',
                 userId: finalUserId,
                 citizenPhoto: photoId
             });
@@ -608,7 +643,7 @@ export default function ReportPage() {
                     </Link>
                     <div>
                         <h1 className="text-sm font-black text-slate-800 uppercase tracking-widest">Report a Grievance</h1>
-                        <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider hidden xs:block">Digital Public Infrastructure for India</p>
+                        <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider hidden xs:block">Govt. of NCT Delhi Grievance System</p>
                     </div>
                 </div>
                 <div className="relative w-8 h-8">
@@ -777,7 +812,7 @@ export default function ReportPage() {
                             </div>
                             <div className="bg-white/50 p-4 rounded-2xl border border-gov-blue/5">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">English Refinement</p>
-                                <p className="text-xs font-bold text-slate-600 leading-relaxed italic">"{aiResult.refinedDescription}"</p>
+                                <p className="text-xs font-bold text-slate-600 leading-relaxed italic">&quot;{aiResult.refinedDescription}&quot;</p>
                             </div>
                         </div>
 

@@ -75,7 +75,7 @@ export default function MapInfoCard({ complaint, onCloseAction, onTrackAction }:
                     </div>
 
                     <p className="text-sm font-medium text-slate-600 mb-6 line-clamp-3 leading-relaxed italic">
-                        "{complaint.description}"
+                        &quot;{complaint.description}&quot;
                     </p>
 
                     <div className="grid grid-cols-2 gap-4 mb-8">
