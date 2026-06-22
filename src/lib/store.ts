@@ -30,7 +30,7 @@ interface InfrastructureAlert {
  * Deduplicates by immutable report id; keeps the record with the
  * newest updatedAt/createdAt when conflicts exist (cloud is canonical).
  */
-export function syncGrievances(cloudGrievances: any[], userId: string) {
+export function syncGrievances(cloudGrievances: Partial<Complaint>[], userId: string) {
     if (typeof window === 'undefined') return;
 
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -38,21 +38,21 @@ export function syncGrievances(cloudGrievances: any[], userId: string) {
 
     // Normalize cloud documents to the local Complaint shape
     const normalizedCloud: Complaint[] = cloudGrievances.map(doc => ({
-        id: doc.$id || doc.id,
-        userId: doc.userId,
-        description: doc.description,
-        category: doc.category,
-        priority: doc.priority,
-        department: doc.department,
-        ward: doc.ward,
-        lat: doc.lat,
-        lng: doc.lng,
+        id: doc.id || '',
+        userId: doc.userId || '',
+        description: doc.description || '',
+        category: doc.category || 'Other',
+        priority: doc.priority || 'Medium',
+        department: doc.department || '',
+        ward: doc.ward || '',
+        lat: doc.lat || 0,
+        lng: doc.lng || 0,
         status: doc.status || 'Pending',
-        assignedTo: doc.assignedTo,
-        createdAt: doc.createdAt || doc.$createdAt,
+        assignedTo: doc.assignedTo || '',
+        createdAt: doc.createdAt || new Date().toISOString(),
         citizenPhoto: doc.citizenPhoto,
         repairPhoto: doc.repairPhoto,
-    } as Complaint));
+    }));
 
     // Build a map keyed by stable id, cloud wins on conflict
     const mergeMap = new Map<string, Complaint>();

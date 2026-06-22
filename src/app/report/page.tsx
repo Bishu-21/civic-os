@@ -40,6 +40,13 @@ const MapComponent = dynamic(() => import("@/components/MapComponent"), {
     loading: () => <div className="w-full h-full bg-slate-50 animate-pulse rounded-3xl flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest">Map Loading...</div>
 });
 
+interface AutocompleteSuggestion {
+    formatted: string;
+    lat: number;
+    lon: number;
+    address?: string;
+}
+
 interface SubmitOverride {
     lat?: number;
     lng?: number;
@@ -73,7 +80,7 @@ export default function ReportPage() {
     const [isDetecting, setIsDetecting] = useState(false);
     
     // Autocomplete State
-    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
     const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
     const [isLocationSelected, setIsLocationSelected] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -419,8 +426,10 @@ export default function ReportPage() {
     // Handle autocomplete fetching
     useEffect(() => {
         if (!location || location.length < 3 || isLocationSelected) {
-            setSuggestions([]);
-            return;
+            const clearTimer = setTimeout(() => {
+                setSuggestions([]);
+            }, 0);
+            return () => clearTimeout(clearTimer);
         }
 
         const timer = setTimeout(async () => {
@@ -428,7 +437,7 @@ export default function ReportPage() {
             try {
                 const res = await getAutocompleteSuggestionsAction(location);
                 if (res.success) {
-                    setSuggestions(res.suggestions);
+                    setSuggestions(res.suggestions as AutocompleteSuggestion[]);
                     setShowSuggestions(true);
                 }
             } catch (err) {
@@ -441,7 +450,7 @@ export default function ReportPage() {
         return () => clearTimeout(timer);
     }, [location, isLocationSelected]);
 
-    const handleSelectSuggestion = (suggestion: any) => {
+    const handleSelectSuggestion = (suggestion: AutocompleteSuggestion) => {
         setLocation(suggestion.formatted);
         setCoords({ lat: suggestion.lat, lng: suggestion.lon });
         setIsLocationSelected(true);
@@ -573,7 +582,6 @@ export default function ReportPage() {
                 ctx.drawImage(videoRef.current, 0, 0);
                 const dataUrl = canvas.toDataURL("image/jpeg");
                 setImagePreview(dataUrl);
-
                 fetch(dataUrl)
                     .then(res => res.blob())
                     .then(blob => {
@@ -615,7 +623,7 @@ export default function ReportPage() {
                     </Link>
                     <div>
                         <h1 className="text-sm font-black text-slate-800 uppercase tracking-widest">Report a Grievance</h1>
-                        <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider hidden xs:block">Digital Public Infrastructure for India</p>
+                        <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider hidden xs:block">Govt. of NCT Delhi Grievance System</p>
                     </div>
                 </div>
                 <div className="relative w-8 h-8">
@@ -784,7 +792,7 @@ export default function ReportPage() {
                             </div>
                             <div className="bg-white/50 p-4 rounded-2xl border border-gov-blue/5">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">English Refinement</p>
-                                <p className="text-xs font-bold text-slate-600 leading-relaxed italic">"{aiResult.refinedDescription}"</p>
+                                <p className="text-xs font-bold text-slate-600 leading-relaxed italic">&quot;{aiResult.refinedDescription}&quot;</p>
                             </div>
                         </div>
 

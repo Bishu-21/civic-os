@@ -1,4 +1,5 @@
-import { redis } from "./ratelimit";
+import { redis, isRedisAvailable, markRedisUnhealthy } from "./ratelimit";
+import { UserProfile } from "./types";
 
 export const CACHE_KEYS = {
     // profile:userId
@@ -13,15 +14,23 @@ export const CACHE_TIMES = {
  * Get cached profile from Redis
  */
 export async function getCachedProfile(userId: string) {
+    if (!isRedisAvailable()) {
+        return null;
+    }
     try {
-        const cached = await redis.get(CACHE_KEYS.PROFILE(userId));
+        const getPromise = redis.get(CACHE_KEYS.PROFILE(userId));
+        const timeoutPromise = new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error("Redis get timeout")), 1000)
+        );
+        const cached = await Promise.race([getPromise, timeoutPromise]);
+        
         if (cached) {
             console.log(`[CACHE] Hit for profile:${userId}`);
-            // Upstash Redis SDK might return object directly if parsed, but usually it depends on usage
             return typeof cached === 'string' ? JSON.parse(cached) : cached;
         }
-    } catch (e) {
-        console.error(`[CACHE] Get error for ${userId}:`, e);
+    } catch (e: any) {
+        console.error(`[CACHE] Get error for ${userId}:`, e.message);
+        markRedisUnhealthy();
     }
     return null;
 }
@@ -29,15 +38,23 @@ export async function getCachedProfile(userId: string) {
 /**
  * Set profile in Redis cache
  */
-export async function setCachedProfile(userId: string, profile: any) {
+export async function setCachedProfile(userId: string, profile: UserProfile) {
+    if (!isRedisAvailable()) {
+        return;
+    }
     try {
         if (!profile) return;
-        await redis.set(CACHE_KEYS.PROFILE(userId), JSON.stringify(profile), {
+        const setPromise = redis.set(CACHE_KEYS.PROFILE(userId), JSON.stringify(profile), {
             ex: CACHE_TIMES.PROFILE
         });
+        const timeoutPromise = new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error("Redis set timeout")), 1000)
+        );
+        await Promise.race([setPromise, timeoutPromise]);
         console.log(`[CACHE] Set for profile:${userId}`);
-    } catch (e) {
-        console.error(`[CACHE] Set error for ${userId}:`, e);
+    } catch (e: any) {
+        console.error(`[CACHE] Set error for ${userId}:`, e.message);
+        markRedisUnhealthy();
     }
 }
 
@@ -45,10 +62,18 @@ export async function setCachedProfile(userId: string, profile: any) {
  * Invalidate profile cache
  */
 export async function invalidateProfileCache(userId: string) {
+    if (!isRedisAvailable()) {
+        return;
+    }
     try {
-        await redis.del(CACHE_KEYS.PROFILE(userId));
+        const delPromise = redis.del(CACHE_KEYS.PROFILE(userId));
+        const timeoutPromise = new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error("Redis del timeout")), 1000)
+        );
+        await Promise.race([delPromise, timeoutPromise]);
         console.log(`[CACHE] Invalidated profile:${userId}`);
-    } catch (e) {
-        console.error(`[CACHE] Invalidate error for ${userId}:`, e);
+    } catch (e: any) {
+        console.error(`[CACHE] Invalidate error for ${userId}:`, e.message);
+        markRedisUnhealthy();
     }
 }

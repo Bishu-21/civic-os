@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import AdminSidebar from "@/components/AdminSidebar";
 import { FileText, Menu, AlertTriangle, ShieldCheck, MailPlus, Search, CalendarDays, X, Send, Loader2 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
@@ -32,7 +33,7 @@ export default function CircularsPage() {
     useEffect(() => {
         const fetchInitialData = async () => {
             const res = await getServerProfileAction();
-            if (!res.success || res.profile?.role !== 'authority') {
+            if (!res.success || (res.profile?.role !== 'authority' && res.profile?.role !== 'cm' && res.profile?.role !== 'team')) {
                 router.push("/dashboard");
                 return;
             }
@@ -63,7 +64,7 @@ export default function CircularsPage() {
         router.push("/auth/login");
     };
 
-    const handleComposeSubmit = async (e: React.FormEvent) => {
+    const handleComposeSubmit = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         setIsSaving(true);
         

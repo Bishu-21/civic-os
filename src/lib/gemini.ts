@@ -15,7 +15,7 @@ export const GEMINI_MODELS = {
     stable: "gemini-2.5-flash"
 };
 
-function parseJson(text: string) {
+function parseJsonSafely(text: string) {
     const clean = text.replace(/```json|```/g, "").trim();
     return JSON.parse(clean);
 }
@@ -66,7 +66,7 @@ Tasks:
     const tryAnalyze = async (modelName: string) => {
         const result = await generateWithTimeout(modelName, prompt, 15000);
         const response = (result as any).response;
-        return parseJson(response.text());
+        return parseJsonSafely(response.text());
     };
 
     try {
@@ -163,7 +163,7 @@ Return JSON with:
     const tryParse = async (modelName: string) => {
         const result = await generateWithTimeout(modelName, prompt, 10000);
         const response = (result as any).response;
-        return parseJson(response.text());
+        return parseJsonSafely(response.text());
     };
 
     try {
@@ -242,7 +242,7 @@ Return:
     const tryVerify = async (modelName: string) => {
         const result = await generateWithTimeout(modelName, prompt, 10000);
         const response = (result as any).response;
-        return parseJson(response.text());
+        return parseJsonSafely(response.text());
     };
 
     try {

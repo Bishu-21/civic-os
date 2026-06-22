@@ -15,13 +15,11 @@ export default function TrackStatusModal({ isOpen, onCloseAction }: TrackStatusM
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
-    const handleSearch = async (e: React.FormEvent) => {
+    const handleSearch = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         if (!complaintId.trim()) return;
 
         setIsLoading(true);
-        // Simulate a lookup or redirect to a public tracking page
-        // For now, redirecting to dashboard with the ID as a param
         setTimeout(() => {
             setIsLoading(false);
             router.push(`/dashboard?track=${complaintId.trim()}`);
@@ -53,7 +51,7 @@ export default function TrackStatusModal({ isOpen, onCloseAction }: TrackStatusM
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h3 className="text-slate-900 text-2xl font-black tracking-tight mb-2">Track Your Request</h3>
-                                <p className="text-slate-500 text-sm font-medium">Enter your unique 12-digit complaint ID</p>
+                                <p className="text-slate-500 text-sm font-medium">Enter your complaint ID to view the latest status</p>
                             </div>
                             <button 
                                 onClick={onCloseAction}
@@ -72,7 +70,7 @@ export default function TrackStatusModal({ isOpen, onCloseAction }: TrackStatusM
                                     type="text"
                                     value={complaintId}
                                     onChange={(e) => setComplaintId(e.target.value)}
-                                    placeholder="e.g. CIV-2024-890123"
+                                    placeholder="e.g. CIV-2026-890123"
                                     className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:border-gov-blue/30 focus:bg-white transition-all outline-none"
                                     required
                                 />
@@ -81,7 +79,7 @@ export default function TrackStatusModal({ isOpen, onCloseAction }: TrackStatusM
                             <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                                 <HiOutlineInformationCircle className="text-amber-600 w-5 h-5 flex-shrink-0 mt-0.5" />
                                 <p className="text-amber-800 text-xs font-medium leading-relaxed">
-                                    Public tracking doesn't require login. You'll see the current status, assigned officer, and estimated resolution time.
+                                    Use your complaint ID to check the current status, assigned department, and resolution note.
                                 </p>
                             </div>
 
@@ -93,7 +91,7 @@ export default function TrackStatusModal({ isOpen, onCloseAction }: TrackStatusM
                                 {isLoading ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Verifying System...
+                                        Looking up complaint...
                                     </>
                                 ) : (
                                     "Check Status Now"

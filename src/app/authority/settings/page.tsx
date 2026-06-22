@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getServerProfileAction, UserProfile } from "@/app/actions/profile";
+import { getServerProfileAction } from "@/app/actions/profile";
+import { UserProfile } from "@/lib/types";
 import AdminSidebar from "@/components/AdminSidebar";
 import { Settings, Menu, Shield, Save, BellRing, Database, Smartphone } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
@@ -24,7 +25,7 @@ export default function SettingsPage() {
     useEffect(() => {
         const checkAuth = async () => {
             const res = await getServerProfileAction();
-            if (!res.success || res.profile?.role !== 'authority') {
+            if (!res.success || (res.profile?.role !== 'authority' && res.profile?.role !== 'cm' && res.profile?.role !== 'team')) {
                 router.push("/dashboard");
                 return;
             }

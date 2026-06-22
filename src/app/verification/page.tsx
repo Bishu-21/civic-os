@@ -30,12 +30,15 @@ function VerificationContent() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (id) {
-            const all = getComplaints();
-            const found = all.find(c => c.id === id);
-            setComplaint(found || null);
-        }
-        setLoading(false);
+        const timer = setTimeout(() => {
+            if (id) {
+                const all = getComplaints();
+                const found = all.find(c => c.id === id);
+                setComplaint(found || null);
+            }
+            setLoading(false);
+        }, 0);
+        return () => clearTimeout(timer);
     }, [id]);
 
     const handleUpdateStatus = (status: 'Resolved' | 'In Progress') => {
@@ -72,7 +75,7 @@ function VerificationContent() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="space-y-2">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Cases • Verification</p>
-                    <h1 className="text-4xl font-black text-mcd-navy tracking-tight">National Resolution Verification</h1>
+                    <h1 className="text-4xl font-black text-mcd-navy tracking-tight">Delhi CM Grievance Verification</h1>
                     <div className="flex items-center gap-4 text-sm font-bold text-mcd-slate">
                         <span className="bg-gray-100 px-3 py-1 rounded">Case ID: <span className="text-mcd-navy">{complaint.id}</span></span>
                         <span className="flex items-center gap-1"><MapPin className="w-4 h-4 text-red-500" /> {complaint.ward}</span>
@@ -218,7 +221,7 @@ function VerificationContent() {
                             <span className="text-xl font-black text-mcd-navy">5.0 / 5.0 AI Confidence</span>
                         </div>
                         <p className="text-sm font-medium text-gray-400 italic font-display">
-                            "AI analyzed post-repair evidence matches pre-repair complaint visual profile."
+                            &quot;AI analyzed post-repair evidence matches pre-repair complaint visual profile.&quot;
                         </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -267,7 +270,7 @@ export default function VerificationPage() {
                     <CheckSquare className="w-4 h-4 text-green-500" /> Compliant with GIGW & WCAG 2.1 standards
                 </div>
                 <div>
-                    © 2026 CIVICOS NATIONAL | GOVT. OF INDIA
+                    © 2026 DELHI CM GRIEVANCE PORTAL | GOVT. OF NCT DELHI
                 </div>
                 <div className="flex gap-6">
                     <a href="#" className="hover:text-mcd-navy transition-colors">Help Desk</a>

@@ -1,12 +1,12 @@
 "use server";
 
-import { createAppwriteClient, DATABASE_ID, GRIEVANCES_COLLECTION_ID, GRIEVANCE_IMAGES_BUCKET_ID, ID, getServerSession } from '@/lib/appwrite.server';
+import { createAppwriteClient, DATABASE_ID, GRIEVANCES_COLLECTION_ID, PROFILES_COLLECTION_ID, GRIEVANCE_IMAGES_BUCKET_ID, ID, getServerSession } from '@/lib/appwrite.server';
 import { Complaint } from '@/lib/types';
 import { Permission, Role, Query } from 'node-appwrite';
 import { InputFile } from 'node-appwrite/file';
 import { unstable_cache } from 'next/cache';
 import { Schemas, sanitizeString } from "@/lib/security";
-import { standardLimiter, getClientIp } from "@/lib/ratelimit";
+import { standardLimiter, getClientIp, checkRateLimit } from "@/lib/ratelimit";
 import { verifyReport } from "@/lib/gemini";
 
 /**
@@ -46,7 +46,7 @@ export async function createGrievanceAction(data: Partial<Complaint>) {
     try {
         // 0. Rate Limiting (Standard)
         const ip = await getClientIp();
-        const { success: limitOk } = await standardLimiter.limit(ip);
+        const { success: limitOk } = await checkRateLimit(standardLimiter, ip);
         if (!limitOk) {
             return { success: false, error: 'RATE_LIMIT_EXCEEDED' };
         }
@@ -131,7 +131,7 @@ export async function createGrievanceAction(data: Partial<Complaint>) {
                 tableId: GRIEVANCES_COLLECTION_ID,
                 queries: [Query.orderDesc('createdAt'), Query.limit(10)]
             });
-            const recentStr = recentGrievances.documents.map((d: any) => `Desc: ${d.description}, Ward: ${d.ward}`).join('\n');
+            const recentStr = recentGrievances.rows.map((d: any) => `Desc: ${d.description}, Ward: ${d.ward}`).join('\n');
             
             const verification = await verifyReport(safeDescription, attributes.category || 'Other', recentStr);
             
@@ -232,7 +232,7 @@ export async function getGrievancesAction() {
         });
 
         // Filter by the current user's ID manually and map $id to id
-        const userGrievances = response.documents
+        const userGrievances = response.rows
             .filter((row: any) => row.userId === user.$id)
             .map((row: any) => ({ ...row, id: row.$id }));
 
@@ -298,7 +298,7 @@ export async function getMyGrievancesPaginatedAction({
                 queries
             });
 
-            const docs = response.documents as any[];
+            const docs = response.rows as any[];
             if (docs.length === 0) {
                 exhausted = true;
                 break;
@@ -352,15 +352,28 @@ export async function getAllGrievancesAction() {
         const sessionSecret = await getServerSession();
         if (!sessionSecret) return { success: false, error: 'NO_SESSION' };
         
-        const { databases } = createAppwriteClient(sessionSecret);
+        const { tablesDB, account: serverAccount } = createAppwriteClient(sessionSecret);
+
+        // Fetch user to check role
+        const user = await serverAccount.get();
+        const profileList = await tablesDB.listRows({
+            databaseId: DATABASE_ID,
+            tableId: PROFILES_COLLECTION_ID,
+            queries: [Query.equal('userId', user.$id), Query.limit(1)]
+        });
+        const userProfile = profileList.rows[0];
+        if (!userProfile || (userProfile.role !== 'authority' && userProfile.role !== 'cm' && userProfile.role !== 'team')) {
+            console.error(`[AUTH_BLOCKED] User ${user.$id} attempted to read all grievances.`);
+            return { success: false, error: 'UNAUTHORIZED_AUTHORITY' };
+        }
 
         // RE-TRY LOGIC for ECONNRESET stability
         let response;
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                response = await databases.listDocuments({
+                response = await tablesDB.listRows({
                     databaseId: DATABASE_ID,
-                    collectionId: GRIEVANCES_COLLECTION_ID,
+                    tableId: GRIEVANCES_COLLECTION_ID,
                     queries: [Query.orderDesc('createdAt'), Query.limit(100)]
                 });
                 break;
@@ -374,7 +387,7 @@ export async function getAllGrievancesAction() {
         if (!response) throw new Error("Failed to fetch grievances after retries.");
 
         // Map $id to id for UI compatibility and ensure high-fidelity fields are present
-        const mappedGrievances = response.documents.map((row: any) => {
+        const mappedGrievances = response.rows.map((row: any) => {
             const now = new Date(row.createdAt);
             // Ensure SLA if missing
             let slaDeadline = row.slaDeadline;
@@ -418,7 +431,7 @@ export async function syncGrievanceUserDetailsAction(userId: string, newName: st
             queries: [Query.limit(500)] // High limit for sync operations
         });
 
-        const userRows = response.documents.filter((row: any) => row.userId === userId);
+        const userRows = response.rows.filter((row: any) => row.userId === userId);
         console.log(`[SYNC_GRIEVANCES] Found ${userRows.length} grievances for ${userId} to sync with name: ${newName}`);
 
         return { success: true, syncedCount: userRows.length };
@@ -429,7 +442,7 @@ export async function syncGrievanceUserDetailsAction(userId: string, newName: st
         // If they rely on joins, we don't need to update.
         // Looking at the dashboard, name isn't directly on the grievance.
         
-        return { success: true, syncedCount: response.documents.length };
+        return { success: true, syncedCount: response.rows.length };
     } catch (error: any) {
         console.error("Sync Grievances Error:", error);
         return { success: false, error: error.message };
@@ -464,9 +477,15 @@ export async function updateGrievanceStatusAction(
         
         if (!user) return { success: false, error: 'USER_NOT_FOUND' };
         
-        // STRICT AUTHORIZATION: Only bs922268@gmail.com for testing
-        if (user.email !== 'bs922268@gmail.com') {
-            console.error(`[AUTH_BLOCKED] User ${user.email} attempted authority action.`);
+        // Fetch user profile from profiles table to check role
+        const profileList = await tablesDB.listRows({
+            databaseId: DATABASE_ID,
+            tableId: PROFILES_COLLECTION_ID,
+            queries: [Query.equal('userId', user.$id), Query.limit(1)]
+        });
+        const userProfile = profileList.rows[0];
+        if (!userProfile || (userProfile.role !== 'authority' && userProfile.role !== 'cm' && userProfile.role !== 'team')) {
+            console.error(`[AUTH_BLOCKED] User ${user.$id} attempted authority action.`);
             return { success: false, error: 'UNAUTHORIZED_AUTHORITY' };
         }
 
@@ -513,12 +532,12 @@ export async function getHyperlocalResolutionsAction(lat: number, lng: number, r
         const sessionSecret = await getServerSession();
         if (!sessionSecret) return { success: false, error: 'NO_SESSION' };
         
-        const { databases } = createAppwriteClient(sessionSecret);
+        const { tablesDB } = createAppwriteClient(sessionSecret);
 
         // Fetch latest resolved docs
-        const response = await databases.listDocuments({
+        const response = await tablesDB.listRows({
             databaseId: DATABASE_ID,
-            collectionId: GRIEVANCES_COLLECTION_ID,
+            tableId: GRIEVANCES_COLLECTION_ID,
             queries: [
                 Query.equal('status', 'Resolved'),
                 Query.orderDesc('resolvedAt'),
@@ -538,7 +557,7 @@ export async function getHyperlocalResolutionsAction(lat: number, lng: number, r
             return R * c;
         };
 
-        const nearbyResolved = response.documents.filter((doc: any) => {
+        const nearbyResolved = response.rows.filter((doc: any) => {
             if (!doc.lat || !doc.lng) return false;
             const dist = getDistance(lat, lng, Number(doc.lat), Number(doc.lng));
             return dist <= radiusKm;
@@ -561,15 +580,15 @@ export async function getHyperlocalResolutionsAction(lat: number, lng: number, r
  */
 const getCachedLiveActivity = unstable_cache(
     async () => {
-        const { databases } = createAppwriteClient(); // Anonymous client
+        const { tablesDB } = createAppwriteClient(); // Anonymous client
         console.log("[CACHE_MISS] Fetching fresh live activity from Appwrite...");
         
         let response;
         for (let i = 0; i < 4; i++) { // Increased retries for stability
             try {
-                response = await databases.listDocuments({
+                response = await tablesDB.listRows({
                     databaseId: DATABASE_ID,
-                    collectionId: GRIEVANCES_COLLECTION_ID,
+                    tableId: GRIEVANCES_COLLECTION_ID,
                     queries: [Query.orderDesc('createdAt'), Query.limit(12)]
                 });
                 break;
@@ -586,7 +605,7 @@ const getCachedLiveActivity = unstable_cache(
 
         if (!response) return []; // Final safety check
 
-        return response.documents.map((doc: any) => {
+        return response.rows.map((doc: any) => {
             const status = doc.status === 'Resolved' ? 'FIXED' : 'REPORTED';
             const emoji = doc.status === 'Resolved' ? '🟢' : '🟡';
             const location = doc.ward?.split('(')[0]?.trim() || 'Sector 4';

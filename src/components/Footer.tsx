@@ -21,7 +21,7 @@ export default function Footer() {
                             </div>
                             <div>
                                 <span className="text-2xl font-black tracking-tighter block leading-none">CivicOS</span>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gov-blue">National infrastructure</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gov-blue">Delhi grievance dashboard prototype</span>
                             </div>
                         </div>
                         <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mb-8">
@@ -57,7 +57,7 @@ export default function Footer() {
                                 <span className="text-slate-500 text-[10px] font-black uppercase mb-1 block">Toll Free Helpline</span>
                                 <div className="flex items-center gap-3">
                                     <HiOutlinePhone className="text-gov-blue w-5 h-5" />
-                                    <span className="text-xl font-black">1800-CIVIC-SUPPORT</span>
+                                <span className="text-xl font-black">CM helpdesk placeholder</span>
                                 </div>
                             </div>
                             <div className="space-y-3">
@@ -78,17 +78,17 @@ export default function Footer() {
                     <div className="flex items-center gap-4 py-2 px-6 bg-white/5 border border-white/10 rounded-full">
                         <div className="flex items-center gap-2">
                             <HiOutlineShieldCheck className="text-emerald-500 w-5 h-5" />
-                            <span className="text-xs font-black uppercase tracking-wider text-slate-300">Built for Digital India</span>
+                            <span className="text-xs font-black uppercase tracking-wider text-slate-300">Delhi CM challenge submission</span>
                         </div>
                         <div className="w-px h-4 bg-white/10" />
-                        <span className="text-[10px] font-medium text-slate-500 italic">An Initiative for Citizen Empowerment</span>
+                        <span className="text-[10px] font-medium text-slate-500 italic">Prototype for civic operations</span>
                     </div>
 
                     <div className="flex flex-wrap justify-center gap-8 text-[11px] font-black uppercase tracking-widest text-slate-500">
                         <Link href="#" className="hover:text-white">Privacy Law</Link>
                         <Link href="#" className="hover:text-white">Terms of Governance</Link>
                         <Link href="#" className="hover:text-white">Accessibility</Link>
-                        <span className="text-slate-800">© 2026 MCD / CivicOS</span>
+                        <span className="text-slate-800">© 2026 CivicOS | Delhi CM Challenge</span>
                     </div>
                 </div>
             </div>

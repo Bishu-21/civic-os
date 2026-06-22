@@ -26,27 +26,27 @@ export default function Home() {
           <h2 className="text-gov-blue text-3xl font-bold tracking-tight mb-12 text-center">Frequently Asked Questions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-              <h3 className="text-slate-900 font-bold mb-3">What is CivicOS National?</h3>
+              <h3 className="text-slate-900 font-bold mb-3">What is the Delhi CM Grievance Dashboard?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                CivicOS National is an AI-powered public infrastructure platform for India that allows citizens to report civic issues and track resolutions in real-time.
+                Delhi CM Grievance Dashboard is an official grievance registration and resolution platform for the Government of NCT Delhi that allows residents to report civic issues and track resolutions in real-time.
               </p>
             </div>
             <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
               <h3 className="text-slate-900 font-bold mb-3">How can I report a civic issue?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                You can report an issue by logging into the CivicOS dashboard and using the AI Quick-Report tool to describe the problem. AI will automatically categorize and route it.
+                You can report an issue by logging into the Delhi CM Grievance Dashboard and using the Quick-Report tool to describe the problem. The system will automatically categorize and route it to the appropriate department.
               </p>
             </div>
             <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
               <h3 className="text-slate-900 font-bold mb-3">Which departments are covered?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                CivicOS covers major municipal departments including Sanitation, Electrical, Roads, Public Health, Water, and Horticulture management.
+                The platform covers major municipal and state departments including Sanitation, Electrical, Roads, Public Health, Water supply, and Horticulture management.
               </p>
             </div>
             <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
               <h3 className="text-slate-900 font-bold mb-3">Is my data secure?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Yes, CivicOS uses government-grade encryption and secure authentication to ensure citizen data privacy and transparency in resolutions.
+                Yes, the Delhi CM Grievance Dashboard uses government-grade encryption and secure authentication to ensure citizen data privacy and transparency in resolutions.
               </p>
             </div>
           </div>

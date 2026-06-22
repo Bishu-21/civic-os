@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://civicos.systems/"),
@@ -14,12 +15,14 @@ export const metadata: Metadata = {
     siteName: "Delhi CM Grievance Dashboard",
     locale: "en_IN",
     type: "website",
-    images: [{
-      url: "/favicon.ico",
-      width: 32,
-      height: 32,
-      alt: "Delhi CM Grievance Dashboard Logo"
-    }],
+    images: [
+      {
+        url: "/favicon.ico",
+        width: 32,
+        height: 32,
+        alt: "Delhi CM Grievance Dashboard Logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -35,8 +38,6 @@ export const metadata: Metadata = {
     canonical: "https://civic-os-five.vercel.app",
   },
 };
-
-import { Analytics } from "@vercel/analytics/next";
 
 export default function RootLayout({
   children,

@@ -35,11 +35,14 @@ export default function AuthGatewayPage() {
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        setIsMounted(true);
+        const timer = setTimeout(() => {
+            setIsMounted(true);
+        }, 0);
         const checkSession = async () => {
             const res = await getCurrentUserAction();
             if (res.success) {
-                if (res.user?.role === 'authority') {
+                const role = res.user?.role;
+                if (role === 'authority' || role === 'cm' || role === 'team') {
                     router.replace('/authority');
                 } else {
                     router.replace('/dashboard');
@@ -47,6 +50,7 @@ export default function AuthGatewayPage() {
             }
         };
         checkSession();
+        return () => clearTimeout(timer);
     }, [router]);
 
     useEffect(() => {
@@ -84,7 +88,7 @@ export default function AuthGatewayPage() {
                 setError(result.error || 'Failed to send OTP. Please try again.');
                 setIsLoading(false);
             }
-        } catch (err) {
+        } catch {
             setError('An unexpected service error occurred.');
             setIsLoading(false);
         }
@@ -118,13 +122,14 @@ export default function AuthGatewayPage() {
                 setError(result.error || 'Verification failed. Please try again.');
                 setIsLoading(false);
             }
-        } catch (err: any) {
-            setError(err.message || 'Invalid verification code.');
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Invalid verification code.';
+            setError(msg);
             setIsLoading(false);
         }
     };
 
-    const handleOfficialLogin = async (e: React.FormEvent) => {
+    const handleOfficialLogin = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         setError('');
         setSuccess('');
@@ -151,8 +156,9 @@ export default function AuthGatewayPage() {
                 setError(result.error || 'Login failed. Please try again.');
                 setIsLoading(false);
             }
-        } catch (err: any) {
-            setError(err.message || 'Invalid official credentials.');
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Invalid official credentials.';
+            setError(msg);
             setIsLoading(false);
         }
     };
@@ -160,7 +166,7 @@ export default function AuthGatewayPage() {
     if (!isMounted) return null;
 
     return (
-        <AuthLayout title="CivicOS National" subtitle="Unified Authentication Gateway">
+        <AuthLayout title="Delhi CM Grievance Portal" subtitle="Unified Authentication Gateway">
             <div className="mb-10">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">Continue as:</label>
                 <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl">
@@ -220,21 +226,22 @@ export default function AuthGatewayPage() {
                                 className="space-y-6"
                             >
                             <div className="space-y-2">
-                                <label htmlFor="mobile" className="text-xs font-black text-slate-700 uppercase tracking-widest px-1">
+                                <label htmlFor="mobile" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
                                     Email Address
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
-                                        <Mail size={20} />
-                                    </div>
                                     <input
+                                        id="mobile"
                                         type="email"
                                         value={mobile}
                                         onChange={(e) => setMobile(e.target.value)}
                                         placeholder="Enter your email address"
-                                        className="w-full bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 placeholder:text-gray-400"
+                                        className="w-full pl-14 pr-5 py-5 bg-slate-50/50 border border-slate-100 rounded-2xl text-base font-bold text-slate-800 placeholder:text-slate-300 focus:bg-white focus:border-primary focus:ring-8 focus:ring-primary/5 transition-all outline-none shadow-sm"
                                         disabled={isLoading}
                                     />
+                                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-300 group-focus-within:text-primary transition-colors z-10">
+                                        <Mail className="w-5 h-5" />
+                                    </div>
                                 </div>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 opacity-60">Authentication via Email OTP is now active.</p>
                             </div>
@@ -315,7 +322,7 @@ export default function AuthGatewayPage() {
                                         />
                                     ))}
                                 </div>
-                                <p className="mt-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sent to +91 {mobile}</p>
+                                <p className="mt-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sent to {mobile}</p>
                             </div>
 
                             <motion.button
@@ -354,7 +361,7 @@ export default function AuthGatewayPage() {
                                     className="text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2"
                                 >
                                     <RefreshCw className="w-3 h-3" />
-                                    Change Mobile Number
+                                    Change Email Address
                                 </button>
                             </div>
                             </motion.div>
@@ -464,7 +471,7 @@ export default function AuthGatewayPage() {
 
                 <div className="flex flex-col items-center text-center opacity-30 group hover:opacity-100 transition-all cursor-default">
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-900 mb-1">Secure Digital Public Infrastructure</p>
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em]">National Data Gateway • Powered by India Stack</p>
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em]">Delhi NCT Data Gateway • Powered by Delhi Stack</p>
                 </div>
             </div>
         </AuthLayout>

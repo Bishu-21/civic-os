@@ -45,10 +45,10 @@ export default function DepartmentGrid() {
                     <div className="max-w-2xl px-2">
                         <div className="flex items-center gap-2 px-3 py-1 bg-gov-blue/5 text-gov-blue text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full w-fit mb-4 border border-gov-blue/10">
                             <span className="w-1.5 h-1.5 bg-gov-blue rounded-full animate-pulse" />
-                            Direct Citizen Hub
+                            Department Routing
                         </div>
                         <h2 className="text-slate-900 text-2xl md:text-5xl font-black tracking-tight mb-3 md:mb-4 tracking-tighter">Unified Municipal Services</h2>
-                        <p className="text-slate-500 text-sm md:text-lg font-medium leading-relaxed">Access specialized departments directly.</p>
+                        <p className="text-slate-500 text-sm md:text-lg font-medium leading-relaxed">Choose the department that should receive the grievance first.</p>
                     </div>
                 </div>
 
@@ -66,7 +66,7 @@ export default function DepartmentGrid() {
                                     <service.icon className="w-6 h-6 md:w-8 md:h-8" />
                                 </div>
                                 <div className="hidden xs:block px-4 py-1.5 bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-100 shadow-sm">
-                                    OFFICIAL
+                                    ROUTING
                                 </div>
                             </div>
 
